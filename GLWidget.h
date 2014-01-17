@@ -52,7 +52,7 @@ private slots:
     void open();
     void save();
     void print();
-	
+
 private:
     void createMenus();
     GLWidget *glWidget;

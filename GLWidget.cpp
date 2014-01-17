@@ -1266,6 +1266,9 @@ Window::Window()
 
     setWindowTitle(tr("DuneGroundEdit"));
     createMenus();
+
+    setMouseTracking(true);
+    centralWidget()->setMouseTracking(true);
 }
 
 void Window::newFile()
