@@ -1422,10 +1422,16 @@ void Window::keyPressEvent(QKeyEvent *event)
 			++drawsize;
 			break;
 		case  Qt::Key_C:
-			/*
-			if (MessageBox(hWnd,"Do you really want to clear map?","DuneGroundEditor",MB_YESNO) == IDYES)
-				duneGround.Clear();
-			*/
+            {
+                QMessageBox msgBox;
+                msgBox.setText("DuneGroundEditor");
+                msgBox.setInformativeText("Do you really want to clear map?");
+                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                msgBox.setDefaultButton(QMessageBox::No);
+                int ret = msgBox.exec();
+                if(ret == QMessageBox::Yes)
+                    duneGround.Clear();
+            }
 			break;
 		case  Qt::Key_Space:
 			showgrey = !showgrey;
