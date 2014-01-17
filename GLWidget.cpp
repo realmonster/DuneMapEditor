@@ -9,8 +9,6 @@
 #include "Dunes.h"
 #include "DuneStructures.h"
 
-unsigned short PlaneB[0x1000/2];
-
 #ifndef _WIN32
 struct POINT
 {
@@ -553,18 +551,18 @@ GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(desiredFormat(), parent),
     m_program(0)
 {
-  connect(&timer, SIGNAL(timeout()), this, SLOT(updateGL()));
-  if(format().swapInterval() == -1)
-  {
-    // V_blank synchronization unavailable
-    timer.setInterval(1);
-  }
-  else
-  {
-    // V_blank synchronization available
-    timer.setInterval(0);
-  }
-  timer.start();
+    connect(&timer, SIGNAL(timeout()), this, SLOT(updateGL()));
+    if(format().swapInterval() == -1)
+    {
+        // V_blank synchronization unavailable
+        timer.setInterval(1);
+    }
+    else
+    {
+        // V_blank synchronization available
+        timer.setInterval(0);
+    }
+    timer.start();
 }
 
 GLWidget::~GLWidget()
@@ -1070,17 +1068,14 @@ void GLWidget::paintGL()
 
 void GLWidget::resizeGL(int width, int height)
 {
+    /*
     int side = qMin(width, height);
     glViewport((width - side) / 2, (height - side) / 2, side, side);
-
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-#ifdef QT_OPENGL_ES_1
-    glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-#else
     glOrtho(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-#endif
     glMatrixMode(GL_MODELVIEW);
+    */
 }
 
 void FreeTexture( GLuint texture )
