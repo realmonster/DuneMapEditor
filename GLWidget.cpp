@@ -928,8 +928,8 @@ void GLWidget::paintGL()
 	// OpenGL animation code goes here
 	//RECT rc;
 	//GetClientRect(hWnd,&rc);
-	double cx = (camera.x+mouse.x-(640/2))/32.0/zoom*2+0.5;
-	double cy = (camera.y+mouse.y-(480/2))/32.0/zoom*2+0.5;
+	double cx = (camera.x+mouse.x-(width()/2))/32.0/zoom*2+0.5;
+	double cy = (camera.y+mouse.y-(height()/2))/32.0/zoom*2+0.5;
 	if (state == 2 && duneGround.tin(cx,cy))
 	{
 		int x = cx;
@@ -957,14 +957,12 @@ void GLWidget::paintGL()
     glLoadIdentity();
 
 	double scale = 1/32.0/zoom;
-	glScalef(64.0/640*zoom,64.0/480*zoom,1);
+	glScalef(64.0/width()*zoom,64.0/height()*zoom,1);
 	glTranslatef( -camera.x*scale, camera.y*scale, 0);
 	//glOrtho(0, 1, 0, 1, -1, 1);
 
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
-	//glTranslatef(0, 1, 0);
-	//glScalef(0.2, 0.2, 1);
 
 	// setup texture mapping
 	glEnable( GL_TEXTURE_2D );
@@ -1068,18 +1066,6 @@ void GLWidget::paintGL()
 	}
 
 	glPopMatrix();
-
-	/*
-	glBegin(GL_TRIANGLES);
-		glColor3f(1.0f, 0.0f, 0.0f);
-		glVertex2f(0.0f, 0.707f);
-		glColor3f(0.0f, 1.0f, 0.0f);
-		glVertex2f(-0.5f, -0.5f);
-		glColor3f(0.0f, 0.0f, 1.0f);
-		glVertex2f(0.5f, -0.5f);
-	glEnd();
-	*/
-
 }
 
 void GLWidget::resizeGL(int width, int height)
@@ -1491,11 +1477,10 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 	{
 		camera.x -= mouse.x-pos.x;
 		camera.y -= mouse.y-pos.y;
-		//UpdateViewport(hWnd);
 	}
 
-	double cx = ((camera.x+mouse.x-(640/2))/32.0/zoom)*2+0.5;
-	double cy = ((camera.y+mouse.y-(480/2))/32.0/zoom)*2+0.5;
+	double cx = ((camera.x+mouse.x-(width()/2))/32.0/zoom)*2+0.5;
+	double cy = ((camera.y+mouse.y-(height()/2))/32.0/zoom)*2+0.5;
 	if (state == 1 && duneGround.tin(cx,cy) && 0/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
 	{
 		for (int x=0; x<drawsize; ++x)
@@ -1524,8 +1509,6 @@ void Window::wheelEvent(QWheelEvent *event)
 		camera.x /= 1.2;
 		camera.y /= 1.2;
 	}
-
-	//UpdateViewport(hWnd);
 
     event->accept();
 }
