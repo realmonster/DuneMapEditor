@@ -18,7 +18,8 @@ struct POINT
 
 POINT camera = {0,0};
 POINT mouse;
-bool mousedown = false;
+bool mouse1down = false;
+bool mouse2down = false;
 
 double zoom = 1;
 bool showgrey = false;
@@ -1437,11 +1438,12 @@ void Window::mousePressEvent(QMouseEvent *event)
 				duneGround = duneGroundNew;
 				ChangeState(0);
 			}
+            mouse1down = true;
 			break;
 		case Qt::RightButton:
 			mouse.x = event->x();
 			mouse.y = event->y();
-			mousedown = true;
+			mouse2down = true;
 			break;
 		default:
 			break;
@@ -1453,9 +1455,10 @@ void Window::mouseReleaseEvent(QMouseEvent *event)
 	switch (event->button())
     {
 		case Qt::LeftButton:
+            mouse1down = false;
 			break;
 		case Qt::RightButton:
-			mousedown = false;
+			mouse2down = false;
 			break;
 		default:
 			break;
@@ -1468,7 +1471,7 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 	mouse.x = event->pos().x();
 	mouse.y = event->pos().y();
 
-	if (mousedown)
+	if (mouse2down)
 	{
 		camera.x -= mouse.x-pos.x;
 		camera.y -= mouse.y-pos.y;
@@ -1476,7 +1479,7 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 
 	double cx = ((camera.x+mouse.x-(width()/2))/32.0/zoom)*2+0.5;
 	double cy = ((camera.y+mouse.y-(height()/2))/32.0/zoom)*2+0.5;
-	if (state == 1 && duneGround.tin(cx,cy) && 0/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
+	if (state == 1 && duneGround.tin(cx,cy) && mouse1down/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
 	{
 		for (int x=0; x<drawsize; ++x)
 		for (int y=0; y<drawsize; ++y)
