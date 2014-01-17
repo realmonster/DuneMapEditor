@@ -634,7 +634,6 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
     height = img.height();
     data = (unsigned char*)malloc( width * height * 4 );
 
-    qDebug("Image width: %d", width);
     QPoint p;
     for (p.rx()=0; p.rx()<width; ++p.rx())
         for (p.ry()=0; p.ry()<height; ++p.ry())
@@ -1036,21 +1035,29 @@ void GLWidget::paintGL()
 		glEnd();
 
 
-		glBindTexture( GL_TEXTURE_2D, GroundGrey );
+        glEnable( GL_BLEND );
+        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
+
+        double pi = qAcos(-1.0);
 		for (int i = 0; i < Units.size(); ++i)
 		{
 			int x = (Units[i].pos&0x3F);
 			int y = (Units[i].pos/0x40);
 			int id = Units[i].id;
+            if (id == 0x19)
+                id = 0x12;
 			int idx = id&15;
-			int idy = (id>>4);
-            glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x,-y);
-            glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+1,-y);
-            glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+1,-(y+1));
-            glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x,-(y+1));
+            int idy = (id>>4)+6;
+            double a = (Units[i].angle/32)*pi/4;
+            glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x+0.5-0.5*cos(a)+0.5*sin(a),-(y+0.5-0.5*sin(a)-0.5*cos(a)));
+            glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+0.5+0.5*cos(a)+0.5*sin(a),-(y+0.5+0.5*sin(a)-0.5*cos(a)));
+            glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+0.5+0.5*cos(a)-0.5*sin(a),-(y+0.5+0.5*sin(a)+0.5*cos(a)));
+            glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x+0.5-0.5*cos(a)-0.5*sin(a),-(y+0.5-0.5*sin(a)+0.5*cos(a)));
 		}
 		glEnd();
+        glDisable( GL_BLEND );
 	}
 
 	if (showgrey)
