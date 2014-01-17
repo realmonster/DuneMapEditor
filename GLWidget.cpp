@@ -12,8 +12,9 @@
 #ifndef _WIN32
 struct POINT
 {
-	int x, y;
+    int x, y;
 };
+
 #endif
 
 POINT camera = {0,0};
@@ -624,32 +625,31 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
 	GLuint texture;
 	int width, height;
 	unsigned char * data;
-	FILE * file;
-	FILE *f;
-	unsigned char tmp;
-	int i;
 
 	// open texture data
-	file = fopen( filename, "rb" );
-	if ( file == NULL ) return 0;
+    QImage img(filename);
 
 	// allocate buffer
-	width = 512;
-	height = 512;
-	data = (unsigned char*)malloc( width * height * 3 );
+    width = img.width();
+    height = img.height();
+    data = (unsigned char*)malloc( width * height * 4 );
 
-	// read texture data
-
-	fseek( file, 0x36, SEEK_SET);
-	fread( data, width * height * 3, 1, file );
-	fclose( file );
-
-	for (i=0; i<width*height; ++i)
-	{
-		tmp = data[i*3];
-		data[i*3] = data[i*3+2];
-		data[i*3+2] = tmp;
-	}
+    qDebug("Image width: %d", width);
+    QPoint p;
+    for (p.rx()=0; p.rx()<width; ++p.rx())
+        for (p.ry()=0; p.ry()<height; ++p.ry())
+        {
+            QColor c = QColor(img.pixel(p));
+            int i = p.rx()+p.ry()*width;
+            data[i*4] = c.red();
+            data[i*4+1] = c.green();
+            data[i*4+2] = c.blue();
+            data[i*4+3] = c.alpha();
+            if (c.red()>0xE0
+             && c.green() == 0
+             && c.blue()>0xE0)
+                data[i*4+3] = 0;
+        }
 
 	// allocate a texture name
 	glGenTextures( 1, &texture );
@@ -673,8 +673,8 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
 				   wrap ? GL_REPEAT : GL_CLAMP );
 
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, width,
-	height, 0, GL_RGB, GL_UNSIGNED_BYTE, data );
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width,
+    height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 
 	// free buffer
 	free( data );
@@ -916,8 +916,8 @@ GLuint GenerateGround()
 void GLWidget::initializeGL()
 {
     // load our texture
-	GroundTiles = LoadTextureRAW("tex1.bmp", 1);
-	StructuresTexture = LoadTextureRAW("structures.bmp", 1);
+    GroundTiles = LoadTextureRAW(":/images/tex1.png", 1);
+    StructuresTexture = LoadTextureRAW(":/images/structures1.png", 1);
 	srand(time(0));
 	GroundGrey = GenerateGround();
 }
@@ -984,10 +984,10 @@ void GLWidget::paintGL()
 					id = duneGround[j][i];
 				int idx = id&15;
 				int idy = (id>>4);
-				glTexCoord2d(tw*(idx+0),1-tw*(idy+0)); glVertex2d(j,-i);
-				glTexCoord2d(tw*(idx+1),1-tw*(idy+0)); glVertex2d(j+1,-i);
-				glTexCoord2d(tw*(idx+1),1-tw*(idy+1)); glVertex2d(j+1,-(i+1));
-				glTexCoord2d(tw*(idx+0),1-tw*(idy+1)); glVertex2d(j,-(i+1));
+                glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(j,-i);
+                glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(j+1,-i);
+                glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(j+1,-(i+1));
+                glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(j,-(i+1));
 			}
 		}
 	}
@@ -1008,10 +1008,10 @@ void GLWidget::paintGL()
 				id = tid[id];
 				int idx = id&15;
 				int idy = (id>>4);
-				glTexCoord2d(tw*(idx+0),1-tw*(idy+0)); glVertex2d(x*0.5-0.25,-(y*0.5-0.25));
-				glTexCoord2d(tw*(idx+1),1-tw*(idy+0)); glVertex2d(x*0.5+0.5-0.25,-(y*0.5-0.25));
-				glTexCoord2d(tw*(idx+1),1-tw*(idy+1)); glVertex2d(x*0.5+0.5-0.25,-(y*0.5+0.5-0.25));
-				glTexCoord2d(tw*(idx+0),1-tw*(idy+1)); glVertex2d(x*0.5-0.25,-(y*0.5+0.5-0.25));
+                glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x*0.5-0.25,-(y*0.5-0.25));
+                glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x*0.5+0.5-0.25,-(y*0.5-0.25));
+                glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x*0.5+0.5-0.25,-(y*0.5+0.5-0.25));
+                glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x*0.5-0.25,-(y*0.5+0.5-0.25));
 			}
 		}
 		glEnd();
@@ -1028,10 +1028,10 @@ void GLWidget::paintGL()
 			int y = (Structures[i].pos/0x40);
 			int id = Structures[i].id;
 			DrawInfos si = StructureDrawInfos[id];
-			glTexCoord2d((si.x+       0)/512.0,1-(si.y+        0)/512.0); glVertex2d(x,            -y);
-			glTexCoord2d((si.x+si.width)/512.0,1-(si.y+        0)/512.0); glVertex2d(x+si.width/32,-y);
-			glTexCoord2d((si.x+si.width)/512.0,1-(si.y+si.height)/512.0); glVertex2d(x+si.width/32,-(y+si.height/32));
-			glTexCoord2d((si.x+       0)/512.0,1-(si.y+si.height)/512.0); glVertex2d(x,            -(y+si.height/32));
+            glTexCoord2d((si.x+       0)/512.0,(si.y+        0)/512.0); glVertex2d(x,            -y);
+            glTexCoord2d((si.x+si.width)/512.0,(si.y+        0)/512.0); glVertex2d(x+si.width/32,-y);
+            glTexCoord2d((si.x+si.width)/512.0,(si.y+si.height)/512.0); glVertex2d(x+si.width/32,-(y+si.height/32));
+            glTexCoord2d((si.x+       0)/512.0,(si.y+si.height)/512.0); glVertex2d(x,            -(y+si.height/32));
 		}
 		glEnd();
 
@@ -1045,10 +1045,10 @@ void GLWidget::paintGL()
 			int id = Units[i].id;
 			int idx = id&15;
 			int idy = (id>>4);
-			glTexCoord2d(tw*(idx+0),1-tw*(idy+0)); glVertex2d(x,-y);
-			glTexCoord2d(tw*(idx+1),1-tw*(idy+0)); glVertex2d(x+1,-y);
-			glTexCoord2d(tw*(idx+1),1-tw*(idy+1)); glVertex2d(x+1,-(y+1));
-			glTexCoord2d(tw*(idx+0),1-tw*(idy+1)); glVertex2d(x,-(y+1));
+            glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x,-y);
+            glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+1,-y);
+            glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+1,-(y+1));
+            glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x,-(y+1));
 		}
 		glEnd();
 	}

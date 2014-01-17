@@ -10,3 +10,6 @@ OBJECTS_DIR   = .obj
 
 QT           += opengl widgets
 
+RESOURCES += \
+    resources.qrc
+
