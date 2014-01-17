@@ -44,7 +44,7 @@ struct Ground
 			for (int y=0; y<height; ++y)
 				(*this)[x][y] = 0;
 	}
-	
+
 	bool in(int x, int y)
 	{
 		if (x<0
@@ -54,12 +54,12 @@ struct Ground
 			return false;
 		return true;
 	}
-	
+
 	double *operator [](int x)
 	{
 		return data+x*height;
 	}
-	
+
 	~Ground()
 	{
 		if (data)
@@ -82,7 +82,7 @@ struct DuneGround
 		types = (unsigned char *)malloc(twidth()*theight()*sizeof(unsigned char));
 		Clear();
 	}
-	
+
 	~DuneGround()
 	{
 		if (data)
@@ -90,7 +90,7 @@ struct DuneGround
 		if (types)
 			free(types);
 	}
-	
+
 	DuneGround(const DuneGround & g)
 	{
 		data = 0;
@@ -99,7 +99,7 @@ struct DuneGround
 		height = 0;
 		(*this) = g;
 	}
-	
+
 	const DuneGround & operator = (const DuneGround &g)
 	{
 		if (width != g.width
@@ -118,7 +118,7 @@ struct DuneGround
 		memcpy(types,g.types,twidth()*theight()*sizeof(unsigned char));
 		return (*this);
 	}
-	
+
 	void Clear()
 	{
 		for (int x=0; x<width; ++x)
@@ -128,31 +128,31 @@ struct DuneGround
 			for (int y=0; y<theight(); ++y)
 				this->t(x,y) = Dust;
 	}
-	
+
 	inline int twidth() const
 	{
 		return width*2+1;
 	}
-	
+
 	inline int theight() const
 	{
 		return height*2+1;
 	}
-	
+
 	inline bool tin(int x, int y) const
 	{
 		return (x>=0 && y>=0 && x<twidth() && y<theight());
 	}
-	
+
 	inline bool in(int x, int y) const
 	{
 		return (x>=0 && y>=0 && x<width && y<height);
 	}
-	
+
 	void Draw(int x, int y, unsigned char type)
 	{
 	    //   0   1   2
-	    // 0 1 2 3 4 5 6 
+	    // 0 1 2 3 4 5 6
 		this->t(x,y) = type;
 		if (in(x/2, y/2))
 			Correct(x/2, y/2, type);
@@ -163,7 +163,7 @@ struct DuneGround
 		if (in(x/2-1, y/2-1))
 			Correct(x/2-1,y/2-1,type);
 	}
-	
+
 	void Correct(int x, int y, unsigned char type_draw)
 	{
 		int k = 0;
@@ -216,7 +216,7 @@ struct DuneGround
 				if (in(x+i,y+j))
 					Update(x+i, y+j);
 	}
-	
+
 	int GetK(int x, int y, unsigned char type)
 	{
 		int mask = 0;
@@ -225,7 +225,7 @@ struct DuneGround
 			for (int j=0; j<3; ++j)
 				if (t(i+x*2,j+y*2) == type
 				|| (type==SpiceLow && t(i+x*2,j+y*2) == SpiceHigh))
-					mask |= 1<<(i+j*3);	
+					mask |= 1<<(i+j*3);
 		//1    2   4
 		//8   16  32
 		//64 128 256
@@ -265,7 +265,7 @@ struct DuneGround
 				k |= 4;
 			if ( (mask&(1+8+64)) == (1+8+64))
 				k |= 8;
-			
+
 			if ( type == Ground && k == 0 && (mask & 16)) // point
 				k = 16;
 			if ( k == 3 && !(mask & 16))
@@ -298,7 +298,7 @@ struct DuneGround
 		    if (was)
 				types_mask |= 1<<type;
 		}
-		
+
 		int k = 0;
 		int mask = 0;
 		int id = 0xB0;
@@ -319,7 +319,7 @@ struct DuneGround
 			if ( k == 19)
 				id = 0x3E;
 		}
-		
+
 		if (types_mask & (1<<SpiceLow))
 		{
 			k = GetK(x,y,SpiceLow);
@@ -333,7 +333,7 @@ struct DuneGround
 			if ( k == 19)
 				id = 0x42;
 		}
-		
+
 		if (types_mask & (1<<SpiceHigh))
 		{
 			k = GetK(x,y,SpiceHigh);
@@ -356,7 +356,7 @@ struct DuneGround
 		}
 		(*this)[x][y] = id;
 	}
-	
+
 	void SetTileMask(int x, int y)
 	{
 		int id = (*this)[x][y];
@@ -387,17 +387,17 @@ struct DuneGround
 		{
 			type = Ground; k = 19;
 		}
-		
+
 		if (id == 0x80)
 		{
 			type = Ground; k = 16;
 		}
-		
+
 		if (id > 0xB0 && id <= 0xBF)
 		{
 			type = SpiceLow; k = id-0xB0;
 		}
-		
+
 		if (id == 0x40)
 		{
 			type = SpiceLow; k = 17;
@@ -414,12 +414,12 @@ struct DuneGround
 		{
 			type = SpiceLow; k = 19;
 		}
-		
+
 		if (id > 0xC0 && id <= 0xCF)
 		{
 			type = SpiceHigh; k = id-0xC0;
 		}
-		
+
 		if (id == 0x44)
 		{
 			type = SpiceHigh; k = 17;
@@ -436,7 +436,7 @@ struct DuneGround
 		{
 			type = SpiceHigh; k = 19;
 		}
-		
+
 		if (type != Dust)
 		{
 			if (k<16)
@@ -494,12 +494,12 @@ struct DuneGround
 						t(i+x*2,j+y*2) = b;
 				}
 	}
-	
+
 	unsigned char *operator [](int x)
 	{
 		return data+x*height;
 	}
-	
+
 	unsigned char & t(int x,int y)
 	{
 		return types[y*twidth()+x];
@@ -541,7 +541,7 @@ Ground g(2*64+1,2*64+1);
 GLuint GroundTiles;
 GLuint GroundGrey;
 GLuint StructuresTexture;
-	
+
 QGLFormat desiredFormat()
 {
     QGLFormat fmt;
@@ -593,17 +593,17 @@ GLuint MakeGreyTexture()
 				data[(x + y*(g.width-1))*3 + i] = g[x][y]*255;
 		}
 	}
-	
+
 	GLuint texture;
 	glGenTextures( 1, &texture );
 
 	glBindTexture( GL_TEXTURE_2D, texture );
-	
+
 	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	// when texture area is small, bilinear filter the closest MIP map
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	
+
 	// when texture area is large, bilinear filter the first MIP map
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
@@ -611,7 +611,7 @@ GLuint MakeGreyTexture()
 	//       ... false, the texture ends at the edges (clamp)
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-				  
+
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, g.width-1, g.height-1, 0, GL_RGB, GL_UNSIGNED_BYTE, data );
 
 	free(data);
@@ -743,14 +743,14 @@ void GenerateGroundRecursive(Ground &g, int x, int y, int width, int height)
 	g[ x                 ][(y + (y + height))/2] = (a + c)/2;
 	g[(x + (x + width))/2][ y + height         ] = (c + d)/2;
 	g[ x + width         ][(y + (y + height))/2] = (b + d)/2;
-	
+
 	double z = (a+b+c+d)/4+((-1+randf()*2)*width/64/2);
 	if (z > 1)
 		z = 1;
 	if (z < 0)
 		z = 0;
 	g[(x + (x + width))/2][(y + (y + height))/2] = z;
-	
+
 	GenerateGroundRecursive(g, x          , y           , width/2, height/2);
 	GenerateGroundRecursive(g, x + width/2, y           , width/2, height/2);
 	GenerateGroundRecursive(g, x          , y + height/2, width/2, height/2);
@@ -762,11 +762,11 @@ void LocalPick(int x, int y, int type, double z, bool inverse)
 	/*static std::vector<bool> was(129*129);
 	if (was.size() != duneGround.width * duneGround.height)
 		was.resize(duneGround.width * duneGround.height);
-	
+
 	was.assign(was.size(), false);*/
 	static bool was[129][129];
 	memset(was,0,sizeof(was));
-	
+
 	duneGroundNew = duneGround;
 
 	static int X[(2*64+1)*(2*64+1)];
@@ -859,7 +859,7 @@ void GenerateGroundCycle(Ground &g, int width)
 					g[x][y]=0;
 			}
 		}
-		
+
 		for (int z=0; z<2; ++z)
 		{
 			for (int y=z*step2; y<width; y+=step)
@@ -910,7 +910,7 @@ GLuint GenerateGround()
 
 	//GenerateGroundRecursive(g, 0, 0, g.width-1, g.height-1);
 	GenerateGroundCycle(g, g.width-1);
-	
+
 	return MakeGreyTexture();
 }
 
@@ -932,8 +932,8 @@ void GLWidget::paintGL()
 	double cy = (camera.y+mouse.y-(480/2))/32.0/zoom*2+0.5;
 	if (state == 2 && duneGround.tin(cx,cy))
 	{
-		int x = cx; 
-		int y = cy; 
+		int x = cx;
+		int y = cy;
 		double n = 0;
 		double z = 0;
 		for (int i=0; i<2; ++i)
@@ -947,22 +947,22 @@ void GLWidget::paintGL()
 		z /= n;
 		LocalPick(cx,cy,drawtype,z,drawinverse);//RangeGround(g[(int)(cx*2)][(int)(cy*2)]);*/
 	}
-	
+
 	glViewport(0, 0, width(), height());
-	
+
 	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
     glClear(GL_COLOR_BUFFER_BIT);
-	
-	glMatrixMode( GL_PROJECTION ); 
-    glLoadIdentity(); 
-	
+
+	glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+
 	double scale = 1/32.0/zoom;
 	glScalef(64.0/640*zoom,64.0/480*zoom,1);
 	glTranslatef( -camera.x*scale, camera.y*scale, 0);
 	//glOrtho(0, 1, 0, 1, -1, 1);
-	
-	glMatrixMode( GL_MODELVIEW ); 
-	glLoadIdentity(); 
+
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
 	//glTranslatef(0, 1, 0);
 	//glScalef(0.2, 0.2, 1);
 
@@ -995,7 +995,7 @@ void GLWidget::paintGL()
 		}
 	}
 	glEnd();
-	
+
 	if (state == 1)
 	{
 		glEnable( GL_BLEND );
@@ -1037,8 +1037,8 @@ void GLWidget::paintGL()
 			glTexCoord2d((si.x+       0)/512.0,1-(si.y+si.height)/512.0); glVertex2d(x,            -(y+si.height/32));
 		}
 		glEnd();
-		
-	
+
+
 		glBindTexture( GL_TEXTURE_2D, GroundGrey );
 		glBegin( GL_QUADS );
 		for (int i = 0; i < Units.size(); ++i)
@@ -1068,7 +1068,7 @@ void GLWidget::paintGL()
 	}
 
 	glPopMatrix();
-	
+
 	/*
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f, 0.0f, 0.0f);
@@ -1116,6 +1116,17 @@ void LoadMap( const char * filename )
             duneGround[x][y]=tmp;
             duneGround.SetTileMask(x,y);
         }
+    fclose(f);
+}
+
+void SaveMap( const char * filename )
+{
+    FILE *f = fopen(filename,"wb");
+    if (!f)
+    	return;
+    for (int y=0; y<duneGround.height; ++y)
+	    for (int x=0; x<duneGround.width; ++x)
+	         fwrite(&duneGround[x][y],1,1,f);
     fclose(f);
 }
 
@@ -1253,7 +1264,7 @@ void LoadMission( const char * filename )
 				}
 				Structures.push_back(structure);
 				break;
-			// Reinforcements 
+			// Reinforcements
 			case 10:
 				fread(buff,1,4*2,f);
 				break;
@@ -1317,7 +1328,7 @@ void Window::createMenus()
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
-	
+
     fileMenu = menuBar()->addMenu(tr("&File"));
 	fileMenu->addAction(newAct);
     fileMenu->addAction(openAct);
@@ -1338,35 +1349,35 @@ void Window::keyPressEvent(QKeyEvent *event)
 				ChangeState(0);
 			break;
 		case Qt::Key_O:
-		{
-			QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
-			if (!fileName.isEmpty())
-				LoadMap(fileName.toLocal8Bit().data());
-		}
+            {
+                QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
+                if (!fileName.isEmpty())
+                    LoadMap(fileName.toLocal8Bit().data());
+            }
 			break;
 		case  Qt::Key_M:
-		{
-			QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Mission"));
-			if (!fileName.isEmpty())
-				LoadMission(fileName.toLocal8Bit().data());
-		}
+            {
+                QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Mission"));
+                if (!fileName.isEmpty())
+                    LoadMission(fileName.toLocal8Bit().data());
+            }
 			break;
 		case  Qt::Key_S:
-			/*
-			LPCSTR filename = SaveFile(hWnd, NULL);
-			if (filename)
-				SaveMap(filename);
-			*/
+            {
+                QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
+                if (!fileName.isEmpty())
+                    SaveMap(fileName.toLocal8Bit().data());
+            }
 			break;
 		case  Qt::Key_G:
-		{
-			QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Grey Bitmap"));
-			if (!fileName.isEmpty())
-			{
-				FreeTexture(GroundGrey);
-				GroundGrey = LoadGreyTexture(fileName.toLocal8Bit().data());
-			}
-		}
+            {
+                QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Grey Bitmap"));
+                if (!fileName.isEmpty())
+                {
+                    FreeTexture(GroundGrey);
+                    GroundGrey = LoadGreyTexture(fileName.toLocal8Bit().data());
+                }
+            }
 			break;
 		case  Qt::Key_R:
 			FreeTexture(GroundGrey);
@@ -1432,7 +1443,7 @@ void Window::mousePressEvent(QMouseEvent *event)
 	switch (event->button())
     {
 		case Qt::LeftButton:
-			mouse.x = event->x(); 
+			mouse.x = event->x();
 			mouse.y = event->y();
 			if (state == 2)
 			{
@@ -1441,7 +1452,7 @@ void Window::mousePressEvent(QMouseEvent *event)
 			}
 			break;
 		case Qt::RightButton:
-			mouse.x = event->x(); 
+			mouse.x = event->x();
 			mouse.y = event->y();
 			mousedown = true;
 			break;
@@ -1469,14 +1480,14 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 	POINT pos = mouse;
 	mouse.x = event->pos().x();
 	mouse.y = event->pos().y();
-		
+
 	if (mousedown)
-	{	
+	{
 		camera.x -= mouse.x-pos.x;
 		camera.y -= mouse.y-pos.y;
 		//UpdateViewport(hWnd);
 	}
-		
+
 	double cx = ((camera.x+mouse.x-(640/2))/32.0/zoom)*2+0.5;
 	double cy = ((camera.y+mouse.y-(480/2))/32.0/zoom)*2+0.5;
 	if (state == 1 && duneGround.tin(cx,cy) && 0/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
@@ -1491,8 +1502,8 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 void Window::wheelEvent(QWheelEvent *event)
 {
 	QPoint p = this->mapFromGlobal(QCursor::pos());
-	
-	mouse.x = p.x(); 
+
+	mouse.x = p.x();
 	mouse.y = p.y();
 	short zDelta = event->delta();
 	if (zDelta > 0)
@@ -1507,8 +1518,8 @@ void Window::wheelEvent(QWheelEvent *event)
 		camera.x /= 1.2;
 		camera.y /= 1.2;
 	}
-	
+
 	//UpdateViewport(hWnd);
-	
+
     event->accept();
 }
