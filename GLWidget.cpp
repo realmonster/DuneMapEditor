@@ -1284,10 +1284,16 @@ void Window::newFile()
 
 void Window::open()
 {
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
+    if (!fileName.isEmpty())
+        LoadMap(fileName.toLocal8Bit().data());
 }
 
 void Window::save()
 {
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
+    if (!fileName.isEmpty())
+        SaveMap(fileName.toLocal8Bit().data());
 }
 
 void Window::print()
@@ -1342,9 +1348,7 @@ void Window::keyPressEvent(QKeyEvent *event)
 			break;
 		case Qt::Key_O:
             {
-                QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
-                if (!fileName.isEmpty())
-                    LoadMap(fileName.toLocal8Bit().data());
+                Window::open();
             }
 			break;
 		case  Qt::Key_M:
@@ -1356,9 +1360,7 @@ void Window::keyPressEvent(QKeyEvent *event)
 			break;
 		case  Qt::Key_S:
             {
-                QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
-                if (!fileName.isEmpty())
-                    SaveMap(fileName.toLocal8Bit().data());
+                Window::save();
             }
 			break;
 		case  Qt::Key_G:
