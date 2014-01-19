@@ -46,5 +46,10 @@
         <file>ground/ground.png</file>
         <file>ground/spicehigh.png</file>
         <file>ground/spicelow.png</file>
+        <file>house/house0.png</file>
+        <file>house/house1.png</file>
+        <file>house/house2.png</file>
+        <file>house/house3.png</file>
+        <file>house/house4.png</file>
     </qresource>
 </RCC>

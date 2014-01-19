@@ -43,6 +43,7 @@ class Window : public QMainWindow
 public:
     Window();
     int getDrawSize();
+    int getHouseSelected();
 
 protected:
 	void keyPressEvent(QKeyEvent *event);
@@ -59,6 +60,7 @@ private slots:
     void saveMap();
     void updateRadars();
     void tool(bool checked);
+    void house(bool checked);
 
 private:
     void createMenus();
@@ -67,12 +69,17 @@ private:
     void buildStructure(int id);
     void buildUnit(int id);
     void drawGround(int type);
+    void selectHouse(int id);
+
+    int houseSelected;
+
     GLWidget *glWidget;
 
     QMenu *fileMenu;
     QToolBar *structuresMenu;
     QToolBar *unitsMenu;
     QToolBar *groundMenu;
+    QToolBar *houseMenu;
     QAction *newMapAct;
     QAction *newMissionAct;
     QAction *openMapAct;
@@ -85,6 +92,7 @@ private:
     QToolButton *structuresButton[50];
     QToolButton *unitsButton[50];
     QToolButton *groundButton[5];
+    QToolButton *houseButton[5];
 };
 
 #endif // _GLWIDGET_H_

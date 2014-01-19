@@ -782,7 +782,7 @@ struct BuildStructureTool : MouseTool
                 {
                     DuneStructure s;
                     s.id = id;
-                    s.house = 0;
+                    s.house = sender->getHouseSelected();
                     s.flag = 0;
                     s.life = 0x100;
                     s.pos = x + y * 0x40;
@@ -816,7 +816,7 @@ struct BuildUnitTool : MouseTool
                 {
                     DuneUnit s;
                     s.id = id;
-                    s.house = 0;
+                    s.house = sender->getHouseSelected();
                     s.angle = 0;
                     s.ai = 0;
                     s.life = 0x100;
@@ -837,7 +837,7 @@ Window::Window()
 
     setCentralWidget(glWidget);
 
-    setWindowTitle(tr("DuneGroundEdit"));
+    setWindowTitle(tr("DuneMapEditor"));
     createMenus();
     createToolbars();
 
@@ -849,13 +849,14 @@ Window::Window()
     radarsTimer->start(133);
 
     currentMouseTool = new DrawGround(0);
+    selectHouse(0);
 }
 
 void Window::newMap()
 {
     QMessageBox msgBox;
-    msgBox.setText("DuneGroundEditor");
-    msgBox.setInformativeText("Do you really want to clear map?");
+    msgBox.setText("DuneMapEditor");
+    msgBox.setInformativeText(tr("Do you really want to clear map?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
     int ret = msgBox.exec();
@@ -866,8 +867,8 @@ void Window::newMap()
 void Window::newMission()
 {
     QMessageBox msgBox;
-    msgBox.setText("DuneGroundEditor");
-    msgBox.setInformativeText("Do you really want to clear mission?");
+    msgBox.setText("DuneMapEditor");
+    msgBox.setInformativeText(tr("Do you really want to clear mission?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
     int ret = msgBox.exec();
@@ -980,6 +981,16 @@ void Window::createToolbars()
     drawSizeSlider->setMaximumWidth(100);
     groundMenu->addWidget(drawSizeSlider);
 
+    houseMenu = this->addToolBar(tr("Houses"));
+    for (int i=0; i<5; ++i)
+    {
+        houseButton[i] = new QToolButton();
+        houseButton[i]->setIcon(QIcon(QString().sprintf(":/house/house%d.png",i)));
+        houseButton[i]->setCheckable(true);
+        houseMenu->addWidget(houseButton[i]);
+        connect(houseButton[i], SIGNAL(clicked(bool)), this, SLOT(house(bool)));
+    }
+
     int order[] = {
          0, // platform x1
          1, // platform x4
@@ -1051,6 +1062,28 @@ void Window::createToolbars()
         unitsMenu->addWidget(unitsButton[i]);
         connect(unitsButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
     }
+}
+
+void Window::house(bool checked)
+{
+    auto sender = QObject::sender();
+    for (int i=0; i<5; ++i)
+    {
+        if (houseButton[i] == sender)
+            selectHouse(i);
+    }
+}
+
+void Window::selectHouse(int id)
+{
+    houseSelected = id;
+    for (int i=0; i<5; ++i)
+        houseButton[i]->setChecked(id == i);
+}
+
+int Window::getHouseSelected()
+{
+    return houseSelected;
 }
 
 void Window::tool(bool checked)
@@ -1169,28 +1202,26 @@ void Window::keyPressEvent(QKeyEvent *event)
 		case  Qt::Key_I:
 			drawinverse = !drawinverse;
 			break;
-		case  Qt::Key_0:
+        case  Qt::Key_1:
             drawGround(0);
 			break;
-		case  Qt::Key_1:
+        case  Qt::Key_2:
             drawGround(1);
 			break;
-		case  Qt::Key_2:
+        case  Qt::Key_3:
             drawGround(2);
 			break;
-		case  Qt::Key_3:
+        case  Qt::Key_4:
             drawGround(3);
 			break;
-		case  Qt::Key_4:
+        case  Qt::Key_5:
             drawGround(4);
 			break;
 		case  Qt::Key_Q:
-			--drawsize;
-			if (drawsize == 0)
-				drawsize = 1;
+            drawSizeSlider->setValue(drawSizeSlider->value()-1);
 			break;
 		case  Qt::Key_W:
-			++drawsize;
+            drawSizeSlider->setValue(drawSizeSlider->value()+1);
 			break;
 		case  Qt::Key_C:
             Window::newMap();
@@ -1251,10 +1282,10 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 
 void Window::wheelEvent(QWheelEvent *event)
 {
-	QPoint p = this->mapFromGlobal(QCursor::pos());
+    QPoint p = this->mapFromGlobal(QCursor::pos());
 
-	mouse.x = p.x();
-	mouse.y = p.y();
+    mouse.x = p.x();
+    mouse.y = p.y();
 	short zDelta = event->delta();
 	if (zDelta > 0)
 	{
