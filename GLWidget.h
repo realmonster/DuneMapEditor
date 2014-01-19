@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QSignalMapper>
 #include <QToolButton>
+#include <QSlider>
 
 class GLWidget : public QGLWidget, protected QOpenGLFunctions
 {
@@ -41,6 +42,7 @@ class Window : public QMainWindow
 
 public:
     Window();
+    int getDrawSize();
 
 protected:
 	void keyPressEvent(QKeyEvent *event);
@@ -61,6 +63,7 @@ private slots:
 private:
     void createMenus();
     void createToolbars();
+    void uncheckTools();
     void buildStructure(int id);
     void buildUnit(int id);
     void drawGround(int type);
@@ -77,6 +80,7 @@ private:
     QAction *saveMapAct;
     QAction *exitAct;
     QTimer *radarsTimer;
+    QSlider *drawSizeSlider;
 
     QToolButton *structuresButton[50];
     QToolButton *unitsButton[50];

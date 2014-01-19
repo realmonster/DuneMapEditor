@@ -28,7 +28,7 @@ double zoom = 1;
 bool showgrey = false;
 bool showunits = true;
 int state = 0;
-int drawtype = 0;
+//int drawtype = 0;
 int drawsize = 1;
 bool drawinverse = false;
 
@@ -751,6 +751,7 @@ struct DrawGround : MouseTool
         double cy = c.ry()*2+0.5;
         if (state == 1 && duneGround.tin(cx,cy) && mouse1down/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
         {
+            int drawsize = sender->getDrawSize();
             for (int x=0; x<drawsize; ++x)
             for (int y=0; y<drawsize; ++y)
                 if (duneGround.tin(cx+x,cx+y))
@@ -864,7 +865,17 @@ void Window::newMap()
 
 void Window::newMission()
 {
-
+    QMessageBox msgBox;
+    msgBox.setText("DuneGroundEditor");
+    msgBox.setInformativeText("Do you really want to clear mission?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    int ret = msgBox.exec();
+    if(ret == QMessageBox::Yes)
+    {
+        Units.clear();
+        Structures.clear();
+    }
 }
 
 void Window::openMap()
@@ -961,6 +972,14 @@ void Window::createToolbars()
         connect(groundButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
     }
 
+    drawSizeSlider = new QSlider();
+    drawSizeSlider->setRange(1,10);
+    drawSizeSlider->setTickInterval(1);
+    drawSizeSlider->setOrientation(Qt::Horizontal);
+    drawSizeSlider->setMinimumWidth(70);
+    drawSizeSlider->setMaximumWidth(100);
+    groundMenu->addWidget(drawSizeSlider);
+
     int order[] = {
          0, // platform x1
          1, // platform x4
@@ -1043,13 +1062,24 @@ void Window::tool(bool checked)
             buildStructure(i);
         if (unitsButton[i] == sender)
             buildUnit(i);
-        if (groundButton[i] == sender)
-        {
-            if (currentMouseTool)
-                delete currentMouseTool;
-            currentMouseTool = new DrawGround(i);
-        }
     }
+    for (int i=0; i<5; ++i)
+        if (groundButton[i] == sender)
+            drawGround(i);
+}
+
+void Window::uncheckTools()
+{
+    for (int i=0; i<50; ++i)
+    {
+        if (structuresButton[i])
+            structuresButton[i]->setChecked(false);
+        if (unitsButton[i])
+            unitsButton[i]->setChecked(false);
+    }
+    for (int i=0; i<5; ++i)
+        if (groundButton[i])
+            groundButton[i]->setChecked(false);
 }
 
 void Window::buildStructure(int id)
@@ -1057,11 +1087,8 @@ void Window::buildStructure(int id)
     if (currentMouseTool)
         delete currentMouseTool;
     currentMouseTool = new BuildStructureTool(id);
-    for (int i=0; i<50; ++i)
-    {
-        if (structuresButton[i])
-           structuresButton[i]->setChecked(i == id);
-    }
+    uncheckTools();
+    structuresButton[id]->setChecked(true);
 }
 
 void Window::buildUnit(int id)
@@ -1069,11 +1096,22 @@ void Window::buildUnit(int id)
     if (currentMouseTool)
         delete currentMouseTool;
     currentMouseTool = new BuildUnitTool(id);
-    for (int i=0; i<50; ++i)
-    {
-        if (unitsButton[i])
-           unitsButton[i]->setChecked(i == id);
-    }
+    uncheckTools();
+    unitsButton[id]->setChecked(true);
+}
+
+void Window::drawGround(int type)
+{
+    if (currentMouseTool)
+        delete currentMouseTool;
+    uncheckTools();
+    currentMouseTool = new DrawGround(type);
+    groundButton[type]->setChecked(true);
+}
+
+int Window::getDrawSize()
+{
+    return drawSizeSlider->value();
 }
 
 void Window::updateRadars()
