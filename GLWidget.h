@@ -8,6 +8,7 @@
 #include <QOpenGLShaderProgram>
 #include <QTimer>
 #include <QSignalMapper>
+#include <QToolButton>
 
 class GLWidget : public QGLWidget, protected QOpenGLFunctions
 {
@@ -49,33 +50,37 @@ protected:
 	void wheelEvent(QWheelEvent *event);
 
 private slots:
-    void newFile();
-    void open();
-    void save();
-    void print();
+    void newMap();
+    void newMission();
+    void openMap();
+    void openMission();
+    void saveMap();
     void updateRadars();
-    void buildStructure(int id);
-    void buildUnit(int id);
+    void tool(bool checked);
 
 private:
     void createMenus();
     void createToolbars();
+    void buildStructure(int id);
+    void buildUnit(int id);
+    void drawGround(int type);
     GLWidget *glWidget;
-    QSignalMapper *structuresMapper;
-    QSignalMapper *unitsMapper;
 
     QMenu *fileMenu;
     QToolBar *structuresMenu;
     QToolBar *unitsMenu;
-	QAction *newAct;
-    QAction *openAct;
-    QAction *saveAct;
-    QAction *printAct;
+    QToolBar *groundMenu;
+    QAction *newMapAct;
+    QAction *newMissionAct;
+    QAction *openMapAct;
+    QAction *openMissionAct;
+    QAction *saveMapAct;
     QAction *exitAct;
     QTimer *radarsTimer;
 
-    QAction *structuresAct[50];
-    QAction *unitsAct[50];
+    QToolButton *structuresButton[50];
+    QToolButton *unitsButton[50];
+    QToolButton *groundButton[5];
 };
 
 #endif // _GLWIDGET_H_

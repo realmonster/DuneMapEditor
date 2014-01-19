@@ -1,7 +1,8 @@
 HEADERS       = Dunes.h \
 				DuneStructures.h \
 				GLWidget.h \
-    DuneGround.h
+    DuneGround.h \
+    MissionParser.h
 
 SOURCES       = GLWidget.cpp \
                 Main.cpp

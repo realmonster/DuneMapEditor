@@ -4,24 +4,24 @@
         <file>tex1.png</file>
     </qresource>
     <qresource prefix="/">
-        <file>icons/structure00.png</file>
-        <file>icons/structure01.png</file>
-        <file>icons/structure02.png</file>
-        <file>icons/structure03.png</file>
-        <file>icons/structure04.png</file>
-        <file>icons/structure05.png</file>
-        <file>icons/structure07.png</file>
-        <file>icons/structure08.png</file>
-        <file>icons/structure09.png</file>
-        <file>icons/structure10.png</file>
-        <file>icons/structure11.png</file>
-        <file>icons/structure12.png</file>
-        <file>icons/structure13.png</file>
-        <file>icons/structure14.png</file>
-        <file>icons/structure15.png</file>
-        <file>icons/structure16.png</file>
-        <file>icons/structure17.png</file>
-        <file>icons/structure18.png</file>
+        <file>structures/structure00.png</file>
+        <file>structures/structure01.png</file>
+        <file>structures/structure02.png</file>
+        <file>structures/structure03.png</file>
+        <file>structures/structure04.png</file>
+        <file>structures/structure05.png</file>
+        <file>structures/structure07.png</file>
+        <file>structures/structure08.png</file>
+        <file>structures/structure09.png</file>
+        <file>structures/structure10.png</file>
+        <file>structures/structure11.png</file>
+        <file>structures/structure12.png</file>
+        <file>structures/structure13.png</file>
+        <file>structures/structure14.png</file>
+        <file>structures/structure15.png</file>
+        <file>structures/structure16.png</file>
+        <file>structures/structure17.png</file>
+        <file>structures/structure18.png</file>
         <file>units/unit00.png</file>
         <file>units/unit01.png</file>
         <file>units/unit02.png</file>
@@ -41,5 +41,10 @@
         <file>units/unit16.png</file>
         <file>units/unit17.png</file>
         <file>units/unit25.png</file>
+        <file>ground/dune.png</file>
+        <file>ground/dust.png</file>
+        <file>ground/ground.png</file>
+        <file>ground/spicehigh.png</file>
+        <file>ground/spicelow.png</file>
     </qresource>
 </RCC>

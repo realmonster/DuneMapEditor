@@ -9,6 +9,7 @@
 #include "Dunes.h"
 #include "DuneStructures.h"
 #include "DuneGround.h"
+#include "MissionParser.h"
 
 #ifndef _WIN32
 struct POINT
@@ -68,26 +69,6 @@ struct Ground
 	}
 };
 
-
-struct DuneUnit
-{
-	short house;
-	short id;
-	short life;
-	short pos;
-	short angle;
-	short ai;
-};
-
-struct DuneStructure
-{
-	short flag;
-	short house;
-	short id;
-	short life;
-	short pos;
-};
-
 struct MouseTool
 {
     virtual void mouseMove(Window *sender, QMouseEvent *event) {}
@@ -122,8 +103,6 @@ QPointF worldCursor(Window *sender, QMouseEvent *event)
 
 DuneGround duneGround(64,64);
 DuneGround duneGroundNew(64,64);
-std::vector<DuneUnit> Units;
-std::vector<DuneStructure> Structures;
 
 Ground g(2*64+1,2*64+1);
 GLuint GroundTiles;
@@ -724,154 +703,11 @@ void SaveMap( const char * filename )
     fclose(f);
 }
 
-void LoadMission( const char * filename )
-{
-	FILE *f = fopen(filename, "rb");
-	if (!f)
-		return;
-	//FILE *log = fopen("log.txt","w");
-	unsigned char buff[20];
-	Units.clear();
-	Structures.clear();
-	DuneUnit unit;
-	DuneStructure structure;
-	for (;;)
-	{
-		unsigned char cmd;
-		unsigned char subcmd;
-		if (!fread(&cmd,1,1,f))
-			break;
-		fread(&subcmd,1,1,f);
-		//fprintf(log,"cmd = %d, subcmd = %d, offset = %X\n",cmd,subcmd,ftell(f)-2);
-		if (cmd & 0x80)
-			break;
-		switch(cmd)
-		{
-			// Settings
-			case 0:
-				switch(subcmd)
-				{
-					// LosePicture
-					case 0:
-					// WinPicture
-					case 1:
-					// BriefPicture
-					case 2:
-						fread(buff,1,2,f);
-						fseek(f,(buff[0]<<8)|buff[1],SEEK_CUR);
-						break;
-
-					// TimeOut
-					case 3:
-					// MapScale
-					case 4:
-					// CursorPos
-					case 5:
-					// TacticalPos
-					case 6:
-					// LoseFlags
-					case 7:
-					// WinFlags
-					case 8:
-						fread(buff,1,2,f);
-						break;
-				}
-				break;
-			// MAP
-			case 1:
-				switch(subcmd)
-				{
-					// Bloom
-					case 'B':
-					// Field
-					case 'F':
-						fread(buff,1,2,f);
-						fseek(f,((buff[0]<<8)|buff[1])*2,SEEK_CUR);
-						break;
-					case 'S':
-						fread(buff,1,2,f);
-						//sprintf(buff,"%d",((buff[0]<<8)|buff[1]));
-						//MessageBox(NULL,buff,"Seed",MB_OK);
-						break;
-				}
-				break;
-			// Harkonnen
-			case 2:
-			// Atreides
-			case 3:
-			// Ordos
-			case 4:
-			// Fremen
-			case 5:
-				switch(subcmd)
-				{
-					// Quota
-					case 'Q':
-					// Credits
-					case 'C':
-					// Brain
-					case 'B':
-					// MaxUnits
-					case 'M':
-						fread(buff,1,2,f);
-						//sprintf(buff,"%d(%X)%c",cmd,ftell(f),subcmd);
-						//MessageBox(NULL,buff,"House",MB_OK);
-						break;
-				}
-				break;
-			// Starport (subcmd = unit)
-			case 6:
-				fread(buff,1,2,f);
-				break;
-			// Teams ( subcmd = team id )
-			case 7:
-				fseek(f,5*2,SEEK_CUR);
-				break;
-			// Units ( subcmd = unk )
-			case 8:
-				fread(buff,1,6*2,f);
-				unit.house = (buff[ 0]<<8) | buff[ 1];
-				unit.id    = (buff[ 2]<<8) | buff[ 3];
-				unit.life  = (buff[ 4]<<8) | buff[ 5];
-				unit.pos   = (buff[ 6]<<8) | buff[ 7];
-				unit.angle = (buff[ 8]<<8) | buff[ 9];
-				unit.ai    = (buff[10]<<8) | buff[12];
-				Units.push_back(unit);
-				break;
-			// Structures ( subcmd = unk )
-			case 9:
-				if (subcmd == 'G')
-				{
-					fread(buff,1,3*2,f);
-					structure.pos  = (buff[ 0]<<8) | buff[ 1];
-					structure.house = (buff[ 2]<<8) | buff[ 3];
-					structure.id    = (buff[ 4]<<8) | buff[ 5];
-				}
-				else
-				{
-					fread(buff,1,5*2,f);
-					structure.flag  = (buff[ 0]<<8) | buff[ 1];
-					structure.house = (buff[ 2]<<8) | buff[ 3];
-					structure.id    = (buff[ 4]<<8) | buff[ 5];
-					structure.life  = (buff[ 6]<<8) | buff[ 7];
-					structure.pos   = (buff[ 8]<<8) | buff[ 9];
-				}
-				Structures.push_back(structure);
-				break;
-			// Reinforcements
-			case 10:
-				fread(buff,1,4*2,f);
-				break;
-		}
-	}
-	fclose(f);
-	//fclose(log);
-	//sprintf((char*)buff,"%d",Units.size());
-	//MessageBox(NULL,(char*)buff,"Units.size()",MB_OK);
-}
-
 struct DrawGround : MouseTool
 {
+    int id;
+    DrawGround(int _id) : id(_id) {}
+
     void mousePress(Window *sender, QMouseEvent *event)
     {
         switch (event->button())
@@ -886,13 +722,6 @@ struct DrawGround : MouseTool
                 }
                 mouse1down = true;
                 break;
-            case Qt::RightButton:
-                mouse.x = event->x();
-                mouse.y = event->y();
-                mouse2down = true;
-                break;
-            default:
-                break;
         }
     }
     void mouseRelease(Window *sender, QMouseEvent *event)
@@ -901,11 +730,6 @@ struct DrawGround : MouseTool
         {
             case Qt::LeftButton:
                 mouse1down = false;
-                break;
-            case Qt::RightButton:
-                mouse2down = false;
-                break;
-            default:
                 break;
         }
     }
@@ -930,7 +754,7 @@ struct DrawGround : MouseTool
             for (int x=0; x<drawsize; ++x)
             for (int y=0; y<drawsize; ++y)
                 if (duneGround.tin(cx+x,cx+y))
-                    duneGround.Draw(cx+x,cy+y,drawtype);
+                    duneGround.Draw(cx+x,cy+y,id);
         }
     }
 };
@@ -965,37 +789,6 @@ struct BuildStructureTool : MouseTool
                 }
             }
                 break;
-            case Qt::RightButton:
-                mouse.x = event->x();
-                mouse.y = event->y();
-                mouse2down = true;
-                break;
-            default:
-                break;
-        }
-    }
-    void mouseRelease(Window *sender, QMouseEvent *event)
-    {
-        switch (event->button())
-        {
-            case Qt::RightButton:
-                mouse2down = false;
-                break;
-            default:
-                break;
-        }
-    }
-
-    void mouseMove(Window *sender, QMouseEvent *event)
-    {
-        POINT pos = mouse;
-        mouse.x = event->pos().x();
-        mouse.y = event->pos().y();
-
-        if (mouse2down)
-        {
-            camera.x -= mouse.x-pos.x;
-            camera.y -= mouse.y-pos.y;
         }
     }
 };
@@ -1031,37 +824,6 @@ struct BuildUnitTool : MouseTool
                 }
             }
                 break;
-            case Qt::RightButton:
-                mouse.x = event->x();
-                mouse.y = event->y();
-                mouse2down = true;
-                break;
-            default:
-                break;
-        }
-    }
-    void mouseRelease(Window *sender, QMouseEvent *event)
-    {
-        switch (event->button())
-        {
-            case Qt::RightButton:
-                mouse2down = false;
-                break;
-            default:
-                break;
-        }
-    }
-
-    void mouseMove(Window *sender, QMouseEvent *event)
-    {
-        POINT pos = mouse;
-        mouse.x = event->pos().x();
-        mouse.y = event->pos().y();
-
-        if (mouse2down)
-        {
-            camera.x -= mouse.x-pos.x;
-            camera.y -= mouse.y-pos.y;
         }
     }
 };
@@ -1085,52 +847,74 @@ Window::Window()
     connect(radarsTimer, SIGNAL(timeout()), this, SLOT(updateRadars()));
     radarsTimer->start(133);
 
-    currentMouseTool = new DrawGround();
+    currentMouseTool = new DrawGround(0);
 }
 
-void Window::newFile()
+void Window::newMap()
 {
+    QMessageBox msgBox;
+    msgBox.setText("DuneGroundEditor");
+    msgBox.setInformativeText("Do you really want to clear map?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    int ret = msgBox.exec();
+    if(ret == QMessageBox::Yes)
+        duneGround.Clear();
 }
 
-void Window::open()
+void Window::newMission()
+{
+
+}
+
+void Window::openMap()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
     if (!fileName.isEmpty())
         LoadMap(fileName.toLocal8Bit().data());
 }
 
-void Window::save()
+void Window::openMission()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Mission"));
+    if (!fileName.isEmpty())
+        LoadMission(fileName.toLocal8Bit().data());
+}
+
+void Window::saveMap()
 {
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
     if (!fileName.isEmpty())
         SaveMap(fileName.toLocal8Bit().data());
 }
 
-void Window::print()
-{
-}
-
 void Window::createMenus()
 {
-    newAct = new QAction(tr("&New"), this);
-    newAct->setShortcuts(QKeySequence::New);
-    newAct->setStatusTip(tr("Create a new file"));
-    connect(newAct, SIGNAL(triggered()), this, SLOT(newFile()));
+    newMapAct = new QAction(tr("&New Map"), this);
+    newMapAct->setShortcuts(QKeySequence::New);
+    newMapAct->setStatusTip(tr("Create a new map"));
+    connect(newMapAct, SIGNAL(triggered()), this, SLOT(newMap()));
 
-    openAct = new QAction(tr("&Open..."), this);
-    openAct->setShortcuts(QKeySequence::Open);
-    openAct->setStatusTip(tr("Open an existing file"));
-    connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
+    newMissionAct = new QAction(tr("New Mission"), this);
+    //newMissionAct->setShortcuts(QKeySequence::New);
+    newMissionAct->setStatusTip(tr("Create a new map"));
+    connect(newMissionAct, SIGNAL(triggered()), this, SLOT(newMission()));
 
-    saveAct = new QAction(tr("&Save"), this);
-    saveAct->setShortcuts(QKeySequence::Save);
-    saveAct->setStatusTip(tr("Save the document to disk"));
-    connect(saveAct, SIGNAL(triggered()), this, SLOT(save()));
+    openMapAct = new QAction(tr("&Open Map"), this);
+    openMapAct->setShortcuts(QKeySequence::Open);
+    openMapAct->setStatusTip(tr("Open an existing map"));
+    connect(openMapAct, SIGNAL(triggered()), this, SLOT(openMap()));
 
-    printAct = new QAction(tr("&Print..."), this);
-    printAct->setShortcuts(QKeySequence::Print);
-    printAct->setStatusTip(tr("Print the document"));
-    connect(printAct, SIGNAL(triggered()), this, SLOT(print()));
+    openMissionAct = new QAction(tr("Open Mission"), this);
+    //openMissionAct->setShortcuts(QKeySequence::Open);
+    openMissionAct->setStatusTip(tr("Open an existing mission"));
+    connect(openMissionAct, SIGNAL(triggered()), this, SLOT(openMission()));
+
+    saveMapAct = new QAction(tr("&Save Map"), this);
+    saveMapAct->setShortcuts(QKeySequence::Save);
+    saveMapAct->setStatusTip(tr("Save the map to disk"));
+    connect(saveMapAct, SIGNAL(triggered()), this, SLOT(saveMap()));
+
 
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
@@ -1138,16 +922,45 @@ void Window::createMenus()
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
 
     fileMenu = menuBar()->addMenu(tr("&File"));
-	fileMenu->addAction(newAct);
-    fileMenu->addAction(openAct);
-    fileMenu->addAction(saveAct);
-    fileMenu->addAction(printAct);
+    fileMenu->addAction(newMapAct);
+    fileMenu->addAction(newMissionAct);
+    fileMenu->addAction(openMapAct);
+    fileMenu->addAction(openMissionAct);
+    fileMenu->addAction(saveMapAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 }
 
 void Window::createToolbars()
 {
+    int gorder[] = {
+        DuneGround::Dust,
+        DuneGround::Ground,
+        DuneGround::SpiceLow,
+        DuneGround::SpiceHigh,
+        DuneGround::Dune,
+    };
+
+    char* gname[] = {
+        "dust",
+        "ground",
+        "spicelow",
+        "spicehigh",
+        "dune",
+    };
+
+    groundMenu = this->addToolBar(tr("Ground"));
+
+    for (int z=0; z<sizeof(gorder)/sizeof(gorder[0]); ++z)
+    {
+        int i = gorder[z];
+        groundButton[i] = new QToolButton();
+        groundButton[i]->setIcon(QIcon(QString().sprintf(":/ground/%s.png",gname[z])));
+        groundButton[i]->setCheckable(true);
+        groundMenu->addWidget(groundButton[i]);
+        connect(groundButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
+    }
+
     int order[] = {
          0, // platform x1
          1, // platform x4
@@ -1168,18 +981,23 @@ void Window::createToolbars()
         11, // Starport
          2, // Palace
         };
-    structuresMenu = this->addToolBar(tr("Structures"));
-    structuresMapper = new QSignalMapper(this);
 
+    structuresMenu = this->addToolBar(tr("Structures"));
+
+    for (int z=0; z<50; ++z)
+    {
+        structuresButton[z] = NULL;
+        unitsButton[z] = NULL;
+    }
     for (int z=0; z<sizeof(order)/sizeof(order[0]); ++z)
     {
         int i = order[z];
-        structuresAct[i] = new QAction(QIcon(QString().sprintf(":/icons/structure%02d.png",i)),"",this);
-        connect(structuresAct[i], SIGNAL(triggered()), structuresMapper, SLOT(map()));
-        structuresMapper->setMapping(structuresAct[i],i);
-        structuresMenu->addAction(structuresAct[i]);
+        structuresButton[i] = new QToolButton();
+        structuresButton[i]->setIcon(QIcon(QString().sprintf(":/structures/structure%02d.png",i)));
+        structuresButton[i]->setCheckable(true);
+        structuresMenu->addWidget(structuresButton[i]);
+        connect(structuresButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
     }
-    connect(structuresMapper, SIGNAL(mapped(int)), this, SLOT(buildStructure(int)));
 
     int uorder[] = {
          4, // Solder
@@ -1204,17 +1022,34 @@ void Window::createToolbars()
         };
 
     unitsMenu = this->addToolBar(tr("Units"));
-    unitsMapper = new QSignalMapper(this);
 
     for (int z=0; z<sizeof(uorder)/sizeof(uorder[0]); ++z)
     {
         int i = uorder[z];
-        unitsAct[i] = new QAction(QIcon(QString().sprintf(":/units/unit%02d.png",i)),"",this);
-        connect(unitsAct[i], SIGNAL(triggered()), unitsMapper, SLOT(map()));
-        unitsMapper->setMapping(unitsAct[i],i);
-        unitsMenu->addAction(unitsAct[i]);
+        unitsButton[i] = new QToolButton();
+        unitsButton[i]->setIcon(QIcon(QString().sprintf(":/units/unit%02d.png",i)));
+        unitsButton[i]->setCheckable(true);
+        unitsMenu->addWidget(unitsButton[i]);
+        connect(unitsButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
     }
-    connect(unitsMapper, SIGNAL(mapped(int)), this, SLOT(buildUnit(int)));
+}
+
+void Window::tool(bool checked)
+{
+    auto sender = QObject::sender();
+    for (int i=0; i<50; ++i)
+    {
+        if (structuresButton[i] == sender)
+            buildStructure(i);
+        if (unitsButton[i] == sender)
+            buildUnit(i);
+        if (groundButton[i] == sender)
+        {
+            if (currentMouseTool)
+                delete currentMouseTool;
+            currentMouseTool = new DrawGround(i);
+        }
+    }
 }
 
 void Window::buildStructure(int id)
@@ -1222,6 +1057,11 @@ void Window::buildStructure(int id)
     if (currentMouseTool)
         delete currentMouseTool;
     currentMouseTool = new BuildStructureTool(id);
+    for (int i=0; i<50; ++i)
+    {
+        if (structuresButton[i])
+           structuresButton[i]->setChecked(i == id);
+    }
 }
 
 void Window::buildUnit(int id)
@@ -1229,6 +1069,11 @@ void Window::buildUnit(int id)
     if (currentMouseTool)
         delete currentMouseTool;
     currentMouseTool = new BuildUnitTool(id);
+    for (int i=0; i<50; ++i)
+    {
+        if (unitsButton[i])
+           unitsButton[i]->setChecked(i == id);
+    }
 }
 
 void Window::updateRadars()
@@ -1248,22 +1093,14 @@ void Window::keyPressEvent(QKeyEvent *event)
 			else
 				ChangeState(0);
 			break;
-		case Qt::Key_O:
-            {
-                Window::open();
-            }
+        case Qt::Key_O:
+            Window::openMap();
 			break;
 		case  Qt::Key_M:
-            {
-                QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Mission"));
-                if (!fileName.isEmpty())
-                    LoadMission(fileName.toLocal8Bit().data());
-            }
+            Window::openMission();
 			break;
 		case  Qt::Key_S:
-            {
-                Window::save();
-            }
+            Window::saveMap();
 			break;
 		case  Qt::Key_G:
             {
@@ -1295,19 +1132,19 @@ void Window::keyPressEvent(QKeyEvent *event)
 			drawinverse = !drawinverse;
 			break;
 		case  Qt::Key_0:
-			drawtype = 0;
+            drawGround(0);
 			break;
 		case  Qt::Key_1:
-			drawtype = 1;
+            drawGround(1);
 			break;
 		case  Qt::Key_2:
-			drawtype = 2;
+            drawGround(2);
 			break;
 		case  Qt::Key_3:
-			drawtype = 3;
+            drawGround(3);
 			break;
 		case  Qt::Key_4:
-			drawtype = 4;
+            drawGround(4);
 			break;
 		case  Qt::Key_Q:
 			--drawsize;
@@ -1318,16 +1155,7 @@ void Window::keyPressEvent(QKeyEvent *event)
 			++drawsize;
 			break;
 		case  Qt::Key_C:
-            {
-                QMessageBox msgBox;
-                msgBox.setText("DuneGroundEditor");
-                msgBox.setInformativeText("Do you really want to clear map?");
-                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-                msgBox.setDefaultButton(QMessageBox::No);
-                int ret = msgBox.exec();
-                if(ret == QMessageBox::Yes)
-                    duneGround.Clear();
-            }
+            Window::newMap();
 			break;
 		case  Qt::Key_Space:
 			showgrey = !showgrey;
@@ -1344,18 +1172,43 @@ void Window::mousePressEvent(QMouseEvent *event)
 {
     if (currentMouseTool)
         currentMouseTool->mousePress(this,event);
+    switch(event->button())
+    {
+        case Qt::RightButton:
+            mouse.x = event->x();
+            mouse.y = event->y();
+            mouse2down = true;
+            break;
+    }
 }
 
 void Window::mouseReleaseEvent(QMouseEvent *event)
 {
     if (currentMouseTool)
         currentMouseTool->mouseRelease(this,event);
+    switch (event->button())
+    {
+        case Qt::RightButton:
+            mouse2down = false;
+            break;
+        default:
+            break;
+    }
 }
 
 void Window::mouseMoveEvent(QMouseEvent* event)
 {
     if (currentMouseTool)
         currentMouseTool->mouseMove(this,event);
+    POINT pos = mouse;
+    mouse.x = event->pos().x();
+    mouse.y = event->pos().y();
+
+    if (mouse2down)
+    {
+        camera.x -= mouse.x-pos.x;
+        camera.y -= mouse.y-pos.y;
+    }
 }
 
 void Window::wheelEvent(QWheelEvent *event)
