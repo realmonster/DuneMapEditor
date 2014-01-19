@@ -7,6 +7,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QTimer>
+#include <QSignalMapper>
 
 class GLWidget : public QGLWidget, protected QOpenGLFunctions
 {
@@ -52,16 +53,29 @@ private slots:
     void open();
     void save();
     void print();
+    void updateRadars();
+    void buildStructure(int id);
+    void buildUnit(int id);
 
 private:
     void createMenus();
+    void createToolbars();
     GLWidget *glWidget;
+    QSignalMapper *structuresMapper;
+    QSignalMapper *unitsMapper;
+
     QMenu *fileMenu;
+    QToolBar *structuresMenu;
+    QToolBar *unitsMenu;
 	QAction *newAct;
     QAction *openAct;
     QAction *saveAct;
     QAction *printAct;
     QAction *exitAct;
+    QTimer *radarsTimer;
+
+    QAction *structuresAct[50];
+    QAction *unitsAct[50];
 };
 
 #endif // _GLWIDGET_H_

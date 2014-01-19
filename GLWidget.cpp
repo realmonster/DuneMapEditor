@@ -8,6 +8,7 @@
 #include "GLWidget.h"
 #include "Dunes.h"
 #include "DuneStructures.h"
+#include "DuneGround.h"
 
 #ifndef _WIN32
 struct POINT
@@ -67,444 +68,6 @@ struct Ground
 	}
 };
 
-struct DuneGround
-{
-	enum Types {Dust, Ground, SpiceLow, SpiceHigh, Dune};
-	int width;
-	int height;
-	unsigned char *data;
-	unsigned char *types;
-	DuneGround(int _width, int _height)
-	{
-		width = _width;
-		height = _height;
-		data = (unsigned char *)malloc(width*height*sizeof(unsigned char));
-		types = (unsigned char *)malloc(twidth()*theight()*sizeof(unsigned char));
-		Clear();
-	}
-
-	~DuneGround()
-	{
-		if (data)
-			free(data);
-		if (types)
-			free(types);
-	}
-
-	DuneGround(const DuneGround & g)
-	{
-		data = 0;
-		types = 0;
-		width = 0;
-		height = 0;
-		(*this) = g;
-	}
-
-	const DuneGround & operator = (const DuneGround &g)
-	{
-		if (width != g.width
-		 || height != g.height)
-		{
-			if (data)
-				free(data);
-			if (types)
-				free(types);
-			data = (unsigned char *)malloc(g.width*g.height*sizeof(unsigned char));
-			types = (unsigned char *)malloc(g.twidth()*g.theight()*sizeof(unsigned char));
-		}
-		width = g.width;
-		height = g.height;
-		memcpy(data,g.data,width*height*sizeof(unsigned char));
-		memcpy(types,g.types,twidth()*theight()*sizeof(unsigned char));
-		return (*this);
-	}
-
-	void Clear()
-	{
-		for (int x=0; x<width; ++x)
-			for (int y=0; y<height; ++y)
-				(*this)[x][y] = 0xB0;
-		for (int x=0; x<twidth(); ++x)
-			for (int y=0; y<theight(); ++y)
-				this->t(x,y) = Dust;
-	}
-
-	inline int twidth() const
-	{
-		return width*2+1;
-	}
-
-	inline int theight() const
-	{
-		return height*2+1;
-	}
-
-	inline bool tin(int x, int y) const
-	{
-		return (x>=0 && y>=0 && x<twidth() && y<theight());
-	}
-
-	inline bool in(int x, int y) const
-	{
-		return (x>=0 && y>=0 && x<width && y<height);
-	}
-
-	void Draw(int x, int y, unsigned char type)
-	{
-	    //   0   1   2
-	    // 0 1 2 3 4 5 6
-		this->t(x,y) = type;
-		if (in(x/2, y/2))
-			Correct(x/2, y/2, type);
-		if (in(x/2-1, y/2))
-			Correct(x/2-1,y/2,type);
-		if (in(x/2, y/2-1))
-			Correct(x/2,y/2-1,type);
-		if (in(x/2-1, y/2-1))
-			Correct(x/2-1,y/2-1,type);
-	}
-
-	void Correct(int x, int y, unsigned char type_draw)
-	{
-		int k = 0;
-		if (type_draw != Dust)
-			k = GetK(x,y,type_draw);
-		int allowed = 0;
-		int replace = Dust;
-		if (type_draw == Ground)
-			allowed = ((1<<Ground) | (1<<Dust));
-		if (type_draw == SpiceLow)
-			allowed = ((1<<SpiceLow) | (1<<SpiceHigh) | (1<<Dust));
-		if (type_draw == SpiceHigh)
-		{
-			allowed = ((1<<SpiceLow) | (1<<SpiceHigh));
-			replace = SpiceLow;
-		}
-		int fmask = make_dunemask(0,1,0,1,1,1,0,1,0);
-		if (type_draw != Dune && k != 0)
-		{
-			for (int i=0; i<3; ++i)
-				for (int j=0; j<3; ++j)
-					if ((~allowed)&(1<<t(i+x*2,j+y*2))
-					&& (((fmask & (1<<(i+j*3))) || type_draw == SpiceHigh)
-					|| t(i+x*2,j+y*2) == Dune) )
-						Draw(i+x*2,j+y*2,replace);
-		}
-		if (type_draw == Dune && k != 0)
-		{
-			for (int i=0; i<3; ++i)
-				for (int j=0; j<3; ++j)
-					if ((fmask & (1<<(i+j*3)))
-					 &&	t(i+x*2,j+y*2) != Dune
-					 && t(i+x*2,j+y*2) != Dust)
-						Draw(i+x*2,j+y*2,Dust);
-			/*int k = GetK(x,y,Dune);
-			int mask = dunemask[k];
-			for (int i=0; i<3; ++i)
-				for (int j=0; j<3; ++j)
-				{
-					if ((mask & (1<<(i+j*3)))
-					 && t(i+x*2,j+y*2) != Dune)
-						Draw(i+x*2,j+y*2,Dune);
-					if (!(mask & (1<<(i+j*3)))
-					 && t(i+x*2,j+y*2) == Dune)
-						Draw(i+x*2,j+y*2,Dust);
-				}*/
-		}
-		for (int i=-1; i<2; ++i)
-			for (int j=-1; j<2; ++j)
-				if (in(x+i,y+j))
-					Update(x+i, y+j);
-	}
-
-	int GetK(int x, int y, unsigned char type)
-	{
-		int mask = 0;
-		int k = 0;
-		for (int i=0; i<3; ++i)
-			for (int j=0; j<3; ++j)
-				if (t(i+x*2,j+y*2) == type
-				|| (type==SpiceLow && t(i+x*2,j+y*2) == SpiceHigh))
-					mask |= 1<<(i+j*3);
-		//1    2   4
-		//8   16  32
-		//64 128 256
-		if ( type == Dune )
-		{
-			k = 0;
-			int min = 10;
-			for (int i=0; i<256; ++i)
-				if (dunemask[i] != -1)
-				{
-					int d = DunemaskDist((dunemask[i] & DUNE_MASK), (mask & DUNE_MASK));
-					if (((dunemask[i] & DUNE_MASK) & (mask & DUNE_MASK)) == (mask & DUNE_MASK)
-					 && d < min)
-					{
-						k = i;
-						min = d;
-					}
-				}
-			for (int i=0; i<256; ++i)
-				if (dunemask[i] != -1)
-				{
-					if (((dunemask[k] & DUNE_MASK)|(mask&16)) == (dunemask[i] & DUNE_MASKMID))
-						k = i;
-				}
-			if (k == 0x9C && (mask & 2))
-				k = 0x60;
-			if (dunemask[k] == 0)
-				k = 0;
-		}
-		else
-		{
-			if ( (mask&(1+2+4)) == (1+2+4))
-				k++;
-			if ( (mask&(4+32+256)) == (4+32+256))
-				k |= 2;
-			if ( (mask&(64+128+256)) == (64+128+256))
-				k |= 4;
-			if ( (mask&(1+8+64)) == (1+8+64))
-				k |= 8;
-
-			if ( type == Ground && k == 0 && (mask & 16)) // point
-				k = 16;
-			if ( k == 3 && !(mask & 16))
-				k = 17;
-			if ( k == 6 && !(mask & 16))
-				k = 18;
-			if ( k == 12 && !(mask & 16))
-				k = 20;
-			if ( k == 9 && !(mask & 16))
-				k = 19;
-		}
-		return k;
-	}
-	void Update(int x, int y)
-	{
-		int types_mask = 0;
-		for (int type = 0; type < 5; ++type)
-		{
-			if (type != Dune)
-			{
-				if (GetK(x,y,type))
-					types_mask |= 1<<type;
-				continue;
-			}
-			bool was = false;
-			for (int i=0; i<3; ++i)
-				for (int j=0; j<3; ++j)
-					if (t(i+x*2,j+y*2) == type)
-						was = true;
-		    if (was)
-				types_mask |= 1<<type;
-		}
-
-		int k = 0;
-		int mask = 0;
-		int id = 0xB0;
-		if (types_mask & (1<<Ground))
-		{
-			k = GetK(x,y,Ground);
-			id = 0x80+k;
-			if (k == 0)
-				id = 0xB0;
-			if ( k == 16) // point
-				id = 0x80;
-			if ( k == 17)
-				id = 0x3C;
-			if ( k == 18)
-				id = 0x3D;
-			if ( k == 20)
-				id = 0x3F;
-			if ( k == 19)
-				id = 0x3E;
-		}
-
-		if (types_mask & (1<<SpiceLow))
-		{
-			k = GetK(x,y,SpiceLow);
-			id = 0xB0+k;
-			if ( k == 17)
-				id = 0x40;
-			if ( k == 18)
-				id = 0x41;
-			if ( k == 20)
-				id = 0x43;
-			if ( k == 19)
-				id = 0x42;
-		}
-
-		if (types_mask & (1<<SpiceHigh))
-		{
-			k = GetK(x,y,SpiceHigh);
-			id = 0xC0+k;
-			if ( k == 17 )
-				id = 0x44;
-			if ( k == 18 )
-				id = 0x45;
-			if ( k == 20 )
-				id = 0x47;
-			if ( k == 19 )
-				id = 0x46;
-		}
-		if (types_mask & (1<<Dune))
-		{
-			k = GetK(x,y,Dune);
-			if (k)
-				id = k;
-			//id = 0x9F;
-		}
-		(*this)[x][y] = id;
-	}
-
-	void SetTileMask(int x, int y)
-	{
-		int id = (*this)[x][y];
-		int type = Dust;
-		int mask = 0;
-		int k = 0;
-		if (id > 0x80 && id <= 0x8F)
-		{
-			type = Ground; k = id-0x80;
-		}
-		if (id == 0x80)
-		{
-			type = Ground; k = 16;
-		}
-		if (id == 0x3C)
-		{
-			type = Ground; k = 17;
-		}
-		if (id == 0x3D)
-		{
-			type = Ground; k = 18;
-		}
-		if (id == 0x3F)
-		{
-			type = Ground; k = 20;
-		}
-		if (id == 0x3E)
-		{
-			type = Ground; k = 19;
-		}
-
-		if (id == 0x80)
-		{
-			type = Ground; k = 16;
-		}
-
-		if (id > 0xB0 && id <= 0xBF)
-		{
-			type = SpiceLow; k = id-0xB0;
-		}
-
-		if (id == 0x40)
-		{
-			type = SpiceLow; k = 17;
-		}
-		if (id == 0x41)
-		{
-			type = SpiceLow; k = 18;
-		}
-		if (id == 0x43)
-		{
-			type = SpiceLow; k = 20;
-		}
-		if (id == 0x42)
-		{
-			type = SpiceLow; k = 19;
-		}
-
-		if (id > 0xC0 && id <= 0xCF)
-		{
-			type = SpiceHigh; k = id-0xC0;
-		}
-
-		if (id == 0x44)
-		{
-			type = SpiceHigh; k = 17;
-		}
-		if (id == 0x45)
-		{
-			type = SpiceHigh; k = 18;
-		}
-		if (id == 0x47)
-		{
-			type = SpiceHigh; k = 20;
-		}
-		if (id == 0x46)
-		{
-			type = SpiceHigh; k = 19;
-		}
-
-		if (type != Dust)
-		{
-			if (k<16)
-			{
-				mask = 0;
-				if (k & 1)
-					mask |= (1+2+4);
-				if (k & 2)
-					mask |= (4+32+256);
-				if (k & 4)
-					mask |= (64+128+256);
-				if (k & 8)
-					mask |= (1+8+64);
-				if (k != 1
-				 && k != 2
-				 && k != 4
-				 && k != 8)
-					mask |= 16;
-			}
-			else
-			{
-				if (k == 16)
-					mask = 16;
-				if (k == 17)
-					mask = make_dunemask(1,1,1,0,0,1,0,0,1);
-				if (k == 18)
-					mask = make_dunemask(0,0,1,0,0,1,1,1,1);
-				if (k == 20)
-					mask = make_dunemask(1,0,0,1,0,0,1,1,1);
-				if (k == 19)
-					mask = make_dunemask(1,1,1,1,0,0,1,0,0);
-			}
-		}
-
-		for (int i=0; i<256; ++i)
-			if (dunemask[i] != -1 && i == id)
-			{
-				mask = dunemask[i];
-				type = Dune;
-			}
-		int a = type;
-		int b = Dust;
-		if (type == SpiceHigh)
-			b = SpiceLow;
-		for (int i=0; i<3; ++i)
-			for (int j=0; j<3; ++j)
-				if (mask & (1<<(i+j*3)))
-				{
-					if (!(type == SpiceLow && t(i+x*2,j+y*2) == SpiceHigh))
-						t(i+x*2,j+y*2) = a;
-				}
-				else
-				{
-					if (b == SpiceLow && t(i+x*2,j+y*2) != SpiceLow)
-						t(i+x*2,j+y*2) = b;
-				}
-	}
-
-	unsigned char *operator [](int x)
-	{
-		return data+x*height;
-	}
-
-	unsigned char & t(int x,int y)
-	{
-		return types[y*twidth()+x];
-	}
-};
 
 struct DuneUnit
 {
@@ -525,11 +88,36 @@ struct DuneStructure
 	short pos;
 };
 
+struct MouseTool
+{
+    virtual void mouseMove(Window *sender, QMouseEvent *event) {}
+    virtual void mousePress(Window *sender, QMouseEvent *event) {}
+    virtual void mouseRelease(Window *sender, QMouseEvent *event) {}
+};
+
 void ChangeState(int _state)
 {
 	if (state == _state)
 		return;
 	state = _state;
+}
+
+QPointF worldCursor(Window *sender)
+{
+    QPointF r;
+    r.setX((camera.x+mouse.x-(sender->width()/2))/32.0/zoom);
+    r.setY((camera.y+mouse.y-(sender->height()/2))/32.0/zoom);
+    return r;
+}
+
+QPointF worldCursor(Window *sender, QMouseEvent *event)
+{
+    QPointF r;
+    mouse.x = event->x();
+    mouse.y = event->y();
+    r.setX((camera.x+event->x()-(sender->width()/2))/32.0/zoom);
+    r.setY((camera.y+event->y()-(sender->height()/2))/32.0/zoom);
+    return r;
 }
 
 DuneGround duneGround(64,64);
@@ -541,6 +129,10 @@ Ground g(2*64+1,2*64+1);
 GLuint GroundTiles;
 GLuint GroundGrey;
 GLuint StructuresTexture;
+
+int radarsAngle;
+
+MouseTool *currentMouseTool = NULL;
 
 QGLFormat desiredFormat()
 {
@@ -926,7 +518,7 @@ void GLWidget::paintGL()
 	// OpenGL animation code goes here
 	//RECT rc;
 	//GetClientRect(hWnd,&rc);
-	double cx = (camera.x+mouse.x-(width()/2))/32.0/zoom*2+0.5;
+    /*double cx = (camera.x+mouse.x-(width()/2))/32.0/zoom*2+0.5;
 	double cy = (camera.y+mouse.y-(height()/2))/32.0/zoom*2+0.5;
 	if (state == 2 && duneGround.tin(cx,cy))
 	{
@@ -944,7 +536,7 @@ void GLWidget::paintGL()
 				}
 		z /= n;
 		LocalPick(cx,cy,drawtype,z,drawinverse);//RangeGround(g[(int)(cx*2)][(int)(cy*2)]);*/
-	}
+    //}*/
 
 	glViewport(0, 0, width(), height());
 
@@ -1019,6 +611,11 @@ void GLWidget::paintGL()
 
 	if (showunits)
 	{
+        double pi = qAcos(-1.0);
+        glColor4f(1.f,1.f,1.f,1.f);
+        glEnable( GL_BLEND );
+        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
 		glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
 		for (int i = 0; i < Structures.size(); ++i)
@@ -1031,16 +628,24 @@ void GLWidget::paintGL()
             glTexCoord2d((si.x+si.width)/512.0,(si.y+        0)/512.0); glVertex2d(x+si.width/32,-y);
             glTexCoord2d((si.x+si.width)/512.0,(si.y+si.height)/512.0); glVertex2d(x+si.width/32,-(y+si.height/32));
             glTexCoord2d((si.x+       0)/512.0,(si.y+si.height)/512.0); glVertex2d(x,            -(y+si.height/32));
+
+            if (id >= 2)
+            {
+                int idx = 6+Structures[i].house;
+                int idy = 8;
+                double a = (radarsAngle)*pi/180;
+                y += (si.height/32)-1;
+                glTexCoord2d(tw/2*(idx+0),tw*(idy+0)/2); glVertex2d(x+0.25-0.25*cos(a)+0.25*sin(a),-(y+0.75-0.25*sin(a)-0.25*cos(a)));
+                glTexCoord2d(tw/2*(idx+1),tw*(idy+0)/2); glVertex2d(x+0.25+0.25*cos(a)+0.25*sin(a),-(y+0.75+0.25*sin(a)-0.25*cos(a)));
+                glTexCoord2d(tw/2*(idx+1),tw*(idy+1)/2); glVertex2d(x+0.25+0.25*cos(a)-0.25*sin(a),-(y+0.75+0.25*sin(a)+0.25*cos(a)));
+                glTexCoord2d(tw/2*(idx+0),tw*(idy+1)/2); glVertex2d(x+0.25-0.25*cos(a)-0.25*sin(a),-(y+0.75-0.25*sin(a)+0.25*cos(a)));
+            }
 		}
 		glEnd();
 
-
-        glEnable( GL_BLEND );
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
 
-        double pi = qAcos(-1.0);
 		for (int i = 0; i < Units.size(); ++i)
 		{
 			int x = (Units[i].pos&0x3F);
@@ -1049,7 +654,7 @@ void GLWidget::paintGL()
             if (id == 0x19)
                 id = 0x12;
 			int idx = id&15;
-            int idy = (id>>4)+6;
+            int idy = (id>>4)+6+Units[i].house*2;
             double a = (Units[i].angle/32)*pi/4;
             glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x+0.5-0.5*cos(a)+0.5*sin(a),-(y+0.5-0.5*sin(a)-0.5*cos(a)));
             glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+0.5+0.5*cos(a)+0.5*sin(a),-(y+0.5+0.5*sin(a)-0.5*cos(a)));
@@ -1265,17 +870,222 @@ void LoadMission( const char * filename )
 	//MessageBox(NULL,(char*)buff,"Units.size()",MB_OK);
 }
 
+struct DrawGround : MouseTool
+{
+    void mousePress(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::LeftButton:
+                mouse.x = event->x();
+                mouse.y = event->y();
+                if (state == 2)
+                {
+                    duneGround = duneGroundNew;
+                    ChangeState(0);
+                }
+                mouse1down = true;
+                break;
+            case Qt::RightButton:
+                mouse.x = event->x();
+                mouse.y = event->y();
+                mouse2down = true;
+                break;
+            default:
+                break;
+        }
+    }
+    void mouseRelease(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::LeftButton:
+                mouse1down = false;
+                break;
+            case Qt::RightButton:
+                mouse2down = false;
+                break;
+            default:
+                break;
+        }
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        POINT pos = mouse;
+        mouse.x = event->pos().x();
+        mouse.y = event->pos().y();
+
+        if (mouse2down)
+        {
+            camera.x -= mouse.x-pos.x;
+            camera.y -= mouse.y-pos.y;
+        }
+
+        QPointF c = worldCursor(sender);
+        double cx = c.rx()*2+0.5;
+        double cy = c.ry()*2+0.5;
+        if (state == 1 && duneGround.tin(cx,cy) && mouse1down/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
+        {
+            for (int x=0; x<drawsize; ++x)
+            for (int y=0; y<drawsize; ++y)
+                if (duneGround.tin(cx+x,cx+y))
+                    duneGround.Draw(cx+x,cy+y,drawtype);
+        }
+    }
+};
+
+struct BuildStructureTool : MouseTool
+{
+    int id;
+
+    BuildStructureTool(int _id) : id(_id) {}
+    void mousePress(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::LeftButton:
+            {
+                mouse.x = event->x();
+                mouse.y = event->y();
+
+                QPointF c = worldCursor(sender, event);
+                int x = c.x();
+                int y = c.y();
+                if (x >= 0 && x <= 0x3F
+                 && y >= 0 && y <= 0x3F)
+                {
+                    DuneStructure s;
+                    s.id = id;
+                    s.house = 0;
+                    s.flag = 0;
+                    s.life = 0x100;
+                    s.pos = x + y * 0x40;
+                    Structures.push_back(s);
+                }
+            }
+                break;
+            case Qt::RightButton:
+                mouse.x = event->x();
+                mouse.y = event->y();
+                mouse2down = true;
+                break;
+            default:
+                break;
+        }
+    }
+    void mouseRelease(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::RightButton:
+                mouse2down = false;
+                break;
+            default:
+                break;
+        }
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        POINT pos = mouse;
+        mouse.x = event->pos().x();
+        mouse.y = event->pos().y();
+
+        if (mouse2down)
+        {
+            camera.x -= mouse.x-pos.x;
+            camera.y -= mouse.y-pos.y;
+        }
+    }
+};
+
+struct BuildUnitTool : MouseTool
+{
+    int id;
+
+    BuildUnitTool(int _id) : id(_id) {}
+    void mousePress(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::LeftButton:
+            {
+                mouse.x = event->x();
+                mouse.y = event->y();
+
+                QPointF c = worldCursor(sender, event);
+                int x = c.x();
+                int y = c.y();
+                if (x >= 0 && x <= 0x3F
+                 && y >= 0 && y <= 0x3F)
+                {
+                    DuneUnit s;
+                    s.id = id;
+                    s.house = 0;
+                    s.angle = 0;
+                    s.ai = 0;
+                    s.life = 0x100;
+                    s.pos = x + y * 0x40;
+                    Units.push_back(s);
+                }
+            }
+                break;
+            case Qt::RightButton:
+                mouse.x = event->x();
+                mouse.y = event->y();
+                mouse2down = true;
+                break;
+            default:
+                break;
+        }
+    }
+    void mouseRelease(Window *sender, QMouseEvent *event)
+    {
+        switch (event->button())
+        {
+            case Qt::RightButton:
+                mouse2down = false;
+                break;
+            default:
+                break;
+        }
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        POINT pos = mouse;
+        mouse.x = event->pos().x();
+        mouse.y = event->pos().y();
+
+        if (mouse2down)
+        {
+            camera.x -= mouse.x-pos.x;
+            camera.y -= mouse.y-pos.y;
+        }
+    }
+};
+
+
 Window::Window()
 {
+    DunemaskInit();
     glWidget = new GLWidget;
 
     setCentralWidget(glWidget);
 
     setWindowTitle(tr("DuneGroundEdit"));
     createMenus();
+    createToolbars();
 
     setMouseTracking(true);
     centralWidget()->setMouseTracking(true);
+
+    radarsTimer = new QTimer(this);
+    connect(radarsTimer, SIGNAL(timeout()), this, SLOT(updateRadars()));
+    radarsTimer->start(133);
+
+    currentMouseTool = new DrawGround();
 }
 
 void Window::newFile()
@@ -1334,6 +1144,98 @@ void Window::createMenus()
     fileMenu->addAction(printAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
+}
+
+void Window::createToolbars()
+{
+    int order[] = {
+         0, // platform x1
+         1, // platform x4
+         8, // CY
+         9, // Windtrap
+        12, // Refinery
+        7,  // Barracks
+        10, // Barracks
+        18, // Radar
+        17, // Spice Silo
+         3, // Venchile
+         4, // Venchile
+        14, // Wall
+        15, // Turret
+        16, // R-Turret
+        13, // Repair
+         5, // Hi-Tech
+        11, // Starport
+         2, // Palace
+        };
+    structuresMenu = this->addToolBar(tr("Structures"));
+    structuresMapper = new QSignalMapper(this);
+
+    for (int z=0; z<sizeof(order)/sizeof(order[0]); ++z)
+    {
+        int i = order[z];
+        structuresAct[i] = new QAction(QIcon(QString().sprintf(":/icons/structure%02d.png",i)),"",this);
+        connect(structuresAct[i], SIGNAL(triggered()), structuresMapper, SLOT(map()));
+        structuresMapper->setMapping(structuresAct[i],i);
+        structuresMenu->addAction(structuresAct[i]);
+    }
+    connect(structuresMapper, SIGNAL(mapped(int)), this, SLOT(buildStructure(int)));
+
+    int uorder[] = {
+         4, // Solder
+         2, // Infantry
+         5, // Trooper
+         3, // Troopers
+        13, // Trike
+        14, // Raider Trike
+        15, // Quad
+        16, // Harvester
+        17, // MCV
+         9, // Tank
+        10, // Siege Tank
+         7, // Launcher
+         8, // Deviator
+        12, // Sonic
+        11, // Devastator
+         6, // ?
+         0, // Carryall
+         1, // Thopter
+        25, // Sandworm
+        };
+
+    unitsMenu = this->addToolBar(tr("Units"));
+    unitsMapper = new QSignalMapper(this);
+
+    for (int z=0; z<sizeof(uorder)/sizeof(uorder[0]); ++z)
+    {
+        int i = uorder[z];
+        unitsAct[i] = new QAction(QIcon(QString().sprintf(":/units/unit%02d.png",i)),"",this);
+        connect(unitsAct[i], SIGNAL(triggered()), unitsMapper, SLOT(map()));
+        unitsMapper->setMapping(unitsAct[i],i);
+        unitsMenu->addAction(unitsAct[i]);
+    }
+    connect(unitsMapper, SIGNAL(mapped(int)), this, SLOT(buildUnit(int)));
+}
+
+void Window::buildStructure(int id)
+{
+    if (currentMouseTool)
+        delete currentMouseTool;
+    currentMouseTool = new BuildStructureTool(id);
+}
+
+void Window::buildUnit(int id)
+{
+    if (currentMouseTool)
+        delete currentMouseTool;
+    currentMouseTool = new BuildUnitTool(id);
+}
+
+void Window::updateRadars()
+{
+    radarsAngle += 45;
+    if (radarsAngle == 360)
+        radarsAngle = 0;
 }
 
 void Window::keyPressEvent(QKeyEvent *event)
@@ -1440,64 +1342,20 @@ void Window::keyPressEvent(QKeyEvent *event)
 
 void Window::mousePressEvent(QMouseEvent *event)
 {
-	switch (event->button())
-    {
-		case Qt::LeftButton:
-			mouse.x = event->x();
-			mouse.y = event->y();
-			if (state == 2)
-			{
-				duneGround = duneGroundNew;
-				ChangeState(0);
-			}
-            mouse1down = true;
-			break;
-		case Qt::RightButton:
-			mouse.x = event->x();
-			mouse.y = event->y();
-			mouse2down = true;
-			break;
-		default:
-			break;
-	}
+    if (currentMouseTool)
+        currentMouseTool->mousePress(this,event);
 }
 
 void Window::mouseReleaseEvent(QMouseEvent *event)
 {
-	switch (event->button())
-    {
-		case Qt::LeftButton:
-            mouse1down = false;
-			break;
-		case Qt::RightButton:
-			mouse2down = false;
-			break;
-		default:
-			break;
-	}
+    if (currentMouseTool)
+        currentMouseTool->mouseRelease(this,event);
 }
 
 void Window::mouseMoveEvent(QMouseEvent* event)
 {
-	POINT pos = mouse;
-	mouse.x = event->pos().x();
-	mouse.y = event->pos().y();
-
-	if (mouse2down)
-	{
-		camera.x -= mouse.x-pos.x;
-		camera.y -= mouse.y-pos.y;
-	}
-
-	double cx = ((camera.x+mouse.x-(width()/2))/32.0/zoom)*2+0.5;
-	double cy = ((camera.y+mouse.y-(height()/2))/32.0/zoom)*2+0.5;
-	if (state == 1 && duneGround.tin(cx,cy) && mouse1down/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
-	{
-		for (int x=0; x<drawsize; ++x)
-		for (int y=0; y<drawsize; ++y)
-			if (duneGround.tin(cx+x,cx+y))
-				duneGround.Draw(cx+x,cy+y,drawtype);
-	}
+    if (currentMouseTool)
+        currentMouseTool->mouseMove(this,event);
 }
 
 void Window::wheelEvent(QWheelEvent *event)

@@ -1,6 +1,7 @@
 HEADERS       = Dunes.h \
 				DuneStructures.h \
-				GLWidget.h
+				GLWidget.h \
+    DuneGround.h
 
 SOURCES       = GLWidget.cpp \
                 Main.cpp
