@@ -86,18 +86,18 @@ void ChangeState(int _state)
 QPointF worldCursor(Window *sender)
 {
     QPointF r;
-    r.setX((camera.x+mouse.x-(sender->width()/2))/32.0/zoom);
-    r.setY((camera.y+mouse.y-(sender->height()/2))/32.0/zoom);
+    r.setX((camera.x+mouse.x-(sender->glWidget->width()/2))/32.0/zoom);
+    r.setY((camera.y+mouse.y-(sender->glWidget->height()/2))/32.0/zoom);
     return r;
 }
 
 QPointF worldCursor(Window *sender, QMouseEvent *event)
 {
     QPointF r;
-    mouse.x = event->x();
-    mouse.y = event->y();
-    r.setX((camera.x+event->x()-(sender->width()/2))/32.0/zoom);
-    r.setY((camera.y+event->y()-(sender->height()/2))/32.0/zoom);
+    mouse.x = event->x()-sender->glWidget->x();
+    mouse.y = event->y()-sender->glWidget->y();
+    r.setX((camera.x+mouse.x-(sender->glWidget->width()/2))/32.0/zoom);
+    r.setY((camera.y+mouse.y-(sender->glWidget->height()/2))/32.0/zoom);
     return r;
 }
 
@@ -713,8 +713,8 @@ struct DrawGround : MouseTool
         switch (event->button())
         {
             case Qt::LeftButton:
-                mouse.x = event->x();
-                mouse.y = event->y();
+                mouse.x = event->x()-sender->glWidget->x();
+                mouse.y = event->y()-sender->glWidget->y();
                 if (state == 2)
                 {
                     duneGround = duneGroundNew;
@@ -737,8 +737,8 @@ struct DrawGround : MouseTool
     void mouseMove(Window *sender, QMouseEvent *event)
     {
         POINT pos = mouse;
-        mouse.x = event->pos().x();
-        mouse.y = event->pos().y();
+        mouse.x = event->x()-sender->glWidget->x();
+        mouse.y = event->y()-sender->glWidget->y();
 
         if (mouse2down)
         {
@@ -771,10 +771,7 @@ struct BuildStructureTool : MouseTool
         {
             case Qt::LeftButton:
             {
-                mouse.x = event->x();
-                mouse.y = event->y();
-
-                QPointF c = worldCursor(sender, event);
+                QPointF c = worldCursor(sender,event);
                 int x = c.x();
                 int y = c.y();
                 if (x >= 0 && x <= 0x3F
@@ -805,9 +802,6 @@ struct BuildUnitTool : MouseTool
         {
             case Qt::LeftButton:
             {
-                mouse.x = event->x();
-                mouse.y = event->y();
-
                 QPointF c = worldCursor(sender, event);
                 int x = c.x();
                 int y = c.y();
@@ -1244,8 +1238,8 @@ void Window::mousePressEvent(QMouseEvent *event)
     switch(event->button())
     {
         case Qt::RightButton:
-            mouse.x = event->x();
-            mouse.y = event->y();
+            mouse.x = event->x()-glWidget->x();
+            mouse.y = event->y()-glWidget->y();
             mouse2down = true;
             break;
     }
@@ -1270,8 +1264,9 @@ void Window::mouseMoveEvent(QMouseEvent* event)
     if (currentMouseTool)
         currentMouseTool->mouseMove(this,event);
     POINT pos = mouse;
-    mouse.x = event->pos().x();
-    mouse.y = event->pos().y();
+    mouse.x = event->x()-glWidget->x();
+    mouse.y = event->y()-glWidget->y();
+    this->statusBar()->showMessage(QString().sprintf("(%d,%d)",mouse.x,mouse.y));
 
     if (mouse2down)
     {
@@ -1282,12 +1277,12 @@ void Window::mouseMoveEvent(QMouseEvent* event)
 
 void Window::wheelEvent(QWheelEvent *event)
 {
-    QPoint p = this->mapFromGlobal(QCursor::pos());
+    QPoint p = this->glWidget->mapFromGlobal(QCursor::pos());
 
     mouse.x = p.x();
     mouse.y = p.y();
 	short zDelta = event->delta();
-	if (zDelta > 0)
+    if (zDelta > 0)
 	{
 		zoom *= 1.2;
 		camera.x *= 1.2;//(camera.x + mouse.x) * (zoom/(zoom-0.1)) - mouse.x;

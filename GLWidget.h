@@ -44,6 +44,7 @@ public:
     Window();
     int getDrawSize();
     int getHouseSelected();
+    GLWidget *glWidget;
 
 protected:
 	void keyPressEvent(QKeyEvent *event);
@@ -72,8 +73,6 @@ private:
     void selectHouse(int id);
 
     int houseSelected;
-
-    GLWidget *glWidget;
 
     QMenu *fileMenu;
     QToolBar *structuresMenu;
