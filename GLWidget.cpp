@@ -894,6 +894,19 @@ void Window::saveMap()
         SaveMap(fileName.toLocal8Bit().data());
 }
 
+void Window::options()
+{
+}
+
+void Window::help()
+{
+}
+
+void Window::about()
+{
+    QMessageBox::about(this, tr("About"), tr("Здесь должен быть пафосный текст"));
+}
+
 void Window::createMenus()
 {
     newMapAct = new QAction(tr("&New Map"), this);
@@ -902,7 +915,6 @@ void Window::createMenus()
     connect(newMapAct, SIGNAL(triggered()), this, SLOT(newMap()));
 
     newMissionAct = new QAction(tr("New Mission"), this);
-    //newMissionAct->setShortcuts(QKeySequence::New);
     newMissionAct->setStatusTip(tr("Create a new map"));
     connect(newMissionAct, SIGNAL(triggered()), this, SLOT(newMission()));
 
@@ -912,7 +924,6 @@ void Window::createMenus()
     connect(openMapAct, SIGNAL(triggered()), this, SLOT(openMap()));
 
     openMissionAct = new QAction(tr("Open Mission"), this);
-    //openMissionAct->setShortcuts(QKeySequence::Open);
     openMissionAct->setStatusTip(tr("Open an existing mission"));
     connect(openMissionAct, SIGNAL(triggered()), this, SLOT(openMission()));
 
@@ -920,7 +931,6 @@ void Window::createMenus()
     saveMapAct->setShortcuts(QKeySequence::Save);
     saveMapAct->setStatusTip(tr("Save the map to disk"));
     connect(saveMapAct, SIGNAL(triggered()), this, SLOT(saveMap()));
-
 
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
@@ -935,6 +945,25 @@ void Window::createMenus()
     fileMenu->addAction(saveMapAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
+
+    optionsAct = new QAction(tr("&Options"), this);
+    optionsAct->setStatusTip(tr("Options"));
+    connect(optionsAct, SIGNAL(triggered()), this, SLOT(options()));
+
+    optionsMenu = menuBar()->addMenu(tr("&Options"));
+    optionsMenu->addAction(optionsAct);
+
+    helpAct = new QAction(tr("&Help"), this);
+    helpAct->setStatusTip(tr("Help"));
+    connect(helpAct, SIGNAL(triggered()), this, SLOT(help()));
+
+    aboutAct = new QAction(tr("&About"), this);
+    aboutAct->setStatusTip(tr("Help"));
+    connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
+
+    helpMenu = menuBar()->addMenu(tr("&Help"));
+    helpMenu->addAction(helpAct);
+    helpMenu->addAction(aboutAct);
 }
 
 void Window::createToolbars()
@@ -1060,7 +1089,7 @@ void Window::createToolbars()
 
 void Window::house(bool checked)
 {
-    auto sender = QObject::sender();
+    QObject *sender = QObject::sender();
     for (int i=0; i<5; ++i)
     {
         if (houseButton[i] == sender)
@@ -1082,7 +1111,7 @@ int Window::getHouseSelected()
 
 void Window::tool(bool checked)
 {
-    auto sender = QObject::sender();
+    QObject *sender = QObject::sender();
     for (int i=0; i<50; ++i)
     {
         if (structuresButton[i] == sender)
@@ -1266,7 +1295,7 @@ void Window::mouseMoveEvent(QMouseEvent* event)
     POINT pos = mouse;
     mouse.x = event->x()-glWidget->x();
     mouse.y = event->y()-glWidget->y();
-    this->statusBar()->showMessage(QString().sprintf("(%d,%d)",mouse.x,mouse.y));
+    //this->statusBar()->showMessage(QString().sprintf("(%d,%d)",mouse.x,mouse.y));
 
     if (mouse2down)
     {

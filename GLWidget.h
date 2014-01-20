@@ -62,6 +62,9 @@ private slots:
     void updateRadars();
     void tool(bool checked);
     void house(bool checked);
+    void options();
+    void help();
+    void about();
 
 private:
     void createMenus();
@@ -75,6 +78,8 @@ private:
     int houseSelected;
 
     QMenu *fileMenu;
+    QMenu *optionsMenu;
+    QMenu *helpMenu;
     QToolBar *structuresMenu;
     QToolBar *unitsMenu;
     QToolBar *groundMenu;
@@ -85,6 +90,9 @@ private:
     QAction *openMissionAct;
     QAction *saveMapAct;
     QAction *exitAct;
+    QAction *optionsAct;
+    QAction *helpAct;
+    QAction *aboutAct;
     QTimer *radarsTimer;
     QSlider *drawSizeSlider;
 
