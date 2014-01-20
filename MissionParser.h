@@ -1,46 +1,155 @@
 #ifndef MISSIONPARSER_H
 #define MISSIONPARSER_H
 
-struct DuneUnit
+struct DuneMission
 {
-    short house;
-    short id;
-    short life;
-    short pos;
-    short angle;
-    short ai;
-};
+    // BASIC
+    QString LosePicture;
+    QString WinPicture;
+    QString BriefPicture;
+    int TimeOut;
+    int MapScale;
+    int CursorPos;
+    int TacticalPos;
+    int LoseFlags;
+    int WinFlags;
 
-struct DuneStructure
+    // MAP
+    std::vector<int> Bloom;
+    std::vector<int> Field;
+    int MapSeed;
+
+    // Houses
+    struct
+    {
+        int Quota; // need collect spice
+        int Credits;
+        int Brain;
+        int MaxUnits;
+    } House[5];
+
+    // Starport
+    struct StarportEntry
+    {
+        int unit;
+        int count;
+    };
+
+    std::vector<StarportEntry> Starport;
+
+    // Teams
+    struct Team
+    {
+        int house;
+        int ai;
+        int type;
+        int min;
+        int max;
+    };
+
+    std::vector<Team> Teams;
+
+    // Units
+    struct Unit
+    {
+        int house;
+        int id;
+        int life;
+        int pos;
+        int angle;
+        int ai;
+    };
+
+    std::vector<Unit> Units;
+
+    // Structures
+    struct Structure
+    {
+        int flag;
+        int house;
+        int id;
+        int life;
+        int pos;
+    };
+
+    std::vector<Structure> Structures;
+
+    // Reinforcements
+    struct Reinforcement
+    {
+        int house;
+        int id;
+        int pos;
+        int delay;
+        int repeat;
+    };
+
+    std::vector<Reinforcement> Reinforcements;
+
+    void Clear()
+    {
+        LosePicture = "LOSTBILD.WSA";
+        WinPicture = "WIN1.WSA";
+        BriefPicture = "QUAD.WSA";
+        MapSeed = 0;
+        TimeOut = 0;
+        MapScale = 0;
+        CursorPos = 0;
+        TacticalPos = 0;
+        LoseFlags = 0;
+        WinFlags = 0;
+
+        for (int i=0; i<5; ++i)
+        {
+            House[i].MaxUnits = 0;
+            House[i].Credits = 0;
+            House[i].Quota = 0;
+            House[i].Brain = 'C';
+        }
+
+        Bloom.clear();
+        Field.clear();
+
+        Starport.clear();
+        Teams.clear();
+        Units.clear();
+        Structures.clear();
+        Reinforcements.clear();
+    }
+}
+
+Mission;
+
+static QString readMString(QFile &f)
 {
-    short flag;
-    short house;
-    short id;
-    short life;
-    short pos;
-};
+    static unsigned char buff[2];
+    f.read((char*)buff,2);
+    return f.read((buff[0]<<8)|buff[1]);
+}
 
-std::vector<DuneUnit> Units;
-std::vector<DuneStructure> Structures;
-
-void LoadMission( const char * filename )
+static int readWord(QFile &f)
 {
-    FILE *f = fopen(filename, "rb");
-    if (!f)
+    static unsigned char buff[2];
+    f.read((char*)buff,2);
+    return (buff[0]<<8)|buff[1];
+}
+
+void LoadMission( QString filename )
+{
+    QFile f(filename);
+    if (!f.open(QIODevice::ReadOnly))
         return;
     //FILE *log = fopen("log.txt","w");
     unsigned char buff[20];
-    Units.clear();
-    Structures.clear();
-    DuneUnit unit;
-    DuneStructure structure;
+    Mission.Clear();
+    DuneMission::Structure structure;
     for (;;)
     {
         unsigned char cmd;
         unsigned char subcmd;
-        if (!fread(&cmd,1,1,f))
+        if (!f.read((char*)&cmd,1))
             break;
-        fread(&subcmd,1,1,f);
+        f.read((char*)&subcmd,1);
         //fprintf(log,"cmd = %d, subcmd = %d, offset = %X\n",cmd,subcmd,ftell(f)-2);
         if (cmd & 0x80)
             break;
@@ -52,27 +161,40 @@ void LoadMission( const char * filename )
                 {
                     // LosePicture
                     case 0:
+                        Mission.LosePicture = readMString(f);
+                        break;
                     // WinPicture
                     case 1:
+                        Mission.WinPicture = readMString(f);
+                        break;
                     // BriefPicture
                     case 2:
-                        fread(buff,1,2,f);
-                        fseek(f,(buff[0]<<8)|buff[1],SEEK_CUR);
+                        Mission.BriefPicture = readMString(f);
                         break;
 
                     // TimeOut
                     case 3:
+                        Mission.TimeOut = readWord(f);
+                        break;
                     // MapScale
                     case 4:
+                        Mission.MapScale = readWord(f);
+                        break;
                     // CursorPos
                     case 5:
+                        Mission.CursorPos = readWord(f);
+                        break;
                     // TacticalPos
                     case 6:
+                        Mission.TacticalPos = readWord(f);
+                        break;
                     // LoseFlags
                     case 7:
+                        Mission.LoseFlags = readWord(f);
+                        break;
                     // WinFlags
                     case 8:
-                        fread(buff,1,2,f);
+                        Mission.WinFlags = readWord(f);
                         break;
                 }
                 break;
@@ -82,13 +204,22 @@ void LoadMission( const char * filename )
                 {
                     // Bloom
                     case 'B':
+                        f.read((char*)buff,2);
+                        Mission.Bloom.resize((buff[0]<<8)|buff[1]);
+                        for (int i=0; i<Mission.Bloom.size(); ++i)
+                            Mission.Bloom[i] = readWord(f);
+                        break;
+
                     // Field
                     case 'F':
-                        fread(buff,1,2,f);
-                        fseek(f,((buff[0]<<8)|buff[1])*2,SEEK_CUR);
+                        f.read((char*)buff,2);
+                        Mission.Field.resize((buff[0]<<8)|buff[1]);
+                        for (int i=0; i<Mission.Field.size(); ++i)
+                            Mission.Field[i] = readWord(f);
                         break;
+
                     case 'S':
-                        fread(buff,1,2,f);
+                        Mission.MapSeed = readWord(f);
                         //sprintf(buff,"%d",((buff[0]<<8)|buff[1]));
                         //MessageBox(NULL,buff,"Seed",MB_OK);
                         break;
@@ -106,13 +237,19 @@ void LoadMission( const char * filename )
                 {
                     // Quota
                     case 'Q':
+                        Mission.House[cmd-2].Quota = readWord(f);
+                        break;
                     // Credits
                     case 'C':
+                        Mission.House[cmd-2].Credits = readWord(f);
+                        break;
                     // Brain
                     case 'B':
+                        Mission.House[cmd-2].Brain = readWord(f);
+                        break;
                     // MaxUnits
                     case 'M':
-                        fread(buff,1,2,f);
+                        Mission.House[cmd-2].MaxUnits = readWord(f);
                         //sprintf(buff,"%d(%X)%c",cmd,ftell(f),subcmd);
                         //MessageBox(NULL,buff,"House",MB_OK);
                         break;
@@ -120,50 +257,77 @@ void LoadMission( const char * filename )
                 break;
             // Starport (subcmd = unit)
             case 6:
-                fread(buff,1,2,f);
+            {
+                DuneMission::StarportEntry se;
+                se.unit = subcmd;
+                se.count = readWord(f);
+                Mission.Starport.push_back(se);
+            }
                 break;
             // Teams ( subcmd = team id )
             case 7:
-                fseek(f,5*2,SEEK_CUR);
+            {
+                DuneMission::Team team;
+                team.house = readWord(f);
+                team.ai    = readWord(f);
+                team.type  = readWord(f);
+                team.min   = readWord(f);
+                team.max   = readWord(f);
+                Mission.Teams.push_back(team);
+            }
                 break;
             // Units ( subcmd = unk )
             case 8:
-                fread(buff,1,6*2,f);
+            {
+                f.read((char*)buff,6*2);
+
+                DuneMission::Unit unit;
                 unit.house = (buff[ 0]<<8) | buff[ 1];
                 unit.id    = (buff[ 2]<<8) | buff[ 3];
                 unit.life  = (buff[ 4]<<8) | buff[ 5];
                 unit.pos   = (buff[ 6]<<8) | buff[ 7];
                 unit.angle = (buff[ 8]<<8) | buff[ 9];
                 unit.ai    = (buff[10]<<8) | buff[12];
-                Units.push_back(unit);
+                Mission.Units.push_back(unit);
+            }
                 break;
             // Structures ( subcmd = unk )
             case 9:
                 if (subcmd == 'G')
                 {
-                    fread(buff,1,3*2,f);
-                    structure.pos  = (buff[ 0]<<8) | buff[ 1];
+                    f.read((char*)buff,3*2);
+                    structure.pos   = (buff[ 0]<<8) | buff[ 1];
                     structure.house = (buff[ 2]<<8) | buff[ 3];
                     structure.id    = (buff[ 4]<<8) | buff[ 5];
                 }
                 else
                 {
-                    fread(buff,1,5*2,f);
+                    f.read((char*)buff,5*2);
                     structure.flag  = (buff[ 0]<<8) | buff[ 1];
                     structure.house = (buff[ 2]<<8) | buff[ 3];
                     structure.id    = (buff[ 4]<<8) | buff[ 5];
                     structure.life  = (buff[ 6]<<8) | buff[ 7];
                     structure.pos   = (buff[ 8]<<8) | buff[ 9];
                 }
-                Structures.push_back(structure);
+                Mission.Structures.push_back(structure);
                 break;
             // Reinforcements
             case 10:
-                fread(buff,1,4*2,f);
+            {
+                f.read((char*)buff,4*2);
+
+                DuneMission::Reinforcement r;
+                r.house  = (buff[ 0]<<8) | buff[ 1];
+                r.id     = (buff[ 2]<<8) | buff[ 3];
+                r.pos    = (buff[ 4]<<8) | buff[ 5];
+                r.delay  = buff[6];
+                r.repeat = buff[7];
+                Mission.Reinforcements.push_back(r);
+            }
                 break;
         }
     }
-    fclose(f);
+    f.close();
     //fclose(log);
     //sprintf((char*)buff,"%d",Units.size());
     //MessageBox(NULL,(char*)buff,"Units.size()",MB_OK);

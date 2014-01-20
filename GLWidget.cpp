@@ -597,11 +597,11 @@ void GLWidget::paintGL()
 
 		glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
-		for (int i = 0; i < Structures.size(); ++i)
+        for (int i = 0; i < Mission.Structures.size(); ++i)
 		{
-			int x = (Structures[i].pos&0x3F);
-			int y = (Structures[i].pos/0x40);
-			int id = Structures[i].id;
+            int x = (Mission.Structures[i].pos&0x3F);
+            int y = (Mission.Structures[i].pos/0x40);
+            int id = Mission.Structures[i].id;
 			DrawInfos si = StructureDrawInfos[id];
             glTexCoord2d((si.x+       0)/512.0,(si.y+        0)/512.0); glVertex2d(x,            -y);
             glTexCoord2d((si.x+si.width)/512.0,(si.y+        0)/512.0); glVertex2d(x+si.width/32,-y);
@@ -610,7 +610,7 @@ void GLWidget::paintGL()
 
             if (id >= 2)
             {
-                int idx = 6+Structures[i].house;
+                int idx = 6+Mission.Structures[i].house;
                 int idy = 8;
                 double a = (radarsAngle)*pi/180;
                 y += (si.height/32)-1;
@@ -625,16 +625,16 @@ void GLWidget::paintGL()
         glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
 
-		for (int i = 0; i < Units.size(); ++i)
+        for (int i = 0; i < Mission.Units.size(); ++i)
 		{
-			int x = (Units[i].pos&0x3F);
-			int y = (Units[i].pos/0x40);
-			int id = Units[i].id;
+            int x = (Mission.Units[i].pos&0x3F);
+            int y = (Mission.Units[i].pos/0x40);
+            int id = Mission.Units[i].id;
             if (id == 0x19)
                 id = 0x12;
 			int idx = id&15;
-            int idy = (id>>4)+6+Units[i].house*2;
-            double a = (Units[i].angle/32)*pi/4;
+            int idy = (id>>4)+6+Mission.Units[i].house*2;
+            double a = (Mission.Units[i].angle/32)*pi/4;
             glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x+0.5-0.5*cos(a)+0.5*sin(a),-(y+0.5-0.5*sin(a)-0.5*cos(a)));
             glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+0.5+0.5*cos(a)+0.5*sin(a),-(y+0.5+0.5*sin(a)-0.5*cos(a)));
             glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+0.5+0.5*cos(a)-0.5*sin(a),-(y+0.5+0.5*sin(a)+0.5*cos(a)));
@@ -777,13 +777,13 @@ struct BuildStructureTool : MouseTool
                 if (x >= 0 && x <= 0x3F
                  && y >= 0 && y <= 0x3F)
                 {
-                    DuneStructure s;
+                    DuneMission::Structure s;
                     s.id = id;
                     s.house = sender->getHouseSelected();
                     s.flag = 0;
                     s.life = 0x100;
                     s.pos = x + y * 0x40;
-                    Structures.push_back(s);
+                    Mission.Structures.push_back(s);
                 }
             }
                 break;
@@ -808,14 +808,14 @@ struct BuildUnitTool : MouseTool
                 if (x >= 0 && x <= 0x3F
                  && y >= 0 && y <= 0x3F)
                 {
-                    DuneUnit s;
+                    DuneMission::Unit s;
                     s.id = id;
                     s.house = sender->getHouseSelected();
                     s.angle = 0;
                     s.ai = 0;
                     s.life = 0x100;
                     s.pos = x + y * 0x40;
-                    Units.push_back(s);
+                    Mission.Units.push_back(s);
                 }
             }
                 break;
@@ -868,8 +868,8 @@ void Window::newMission()
     int ret = msgBox.exec();
     if(ret == QMessageBox::Yes)
     {
-        Units.clear();
-        Structures.clear();
+        Mission.Units.clear();
+        Mission.Structures.clear();
     }
 }
 
