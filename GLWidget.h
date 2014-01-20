@@ -59,6 +59,7 @@ private slots:
     void openMap();
     void openMission();
     void saveMap();
+    void saveMission();
     void updateRadars();
     void tool(bool checked);
     void house(bool checked);
@@ -89,6 +90,7 @@ private:
     QAction *openMapAct;
     QAction *openMissionAct;
     QAction *saveMapAct;
+    QAction *saveMissionAct;
     QAction *exitAct;
     QAction *optionsAct;
     QAction *helpAct;

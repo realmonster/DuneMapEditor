@@ -104,7 +104,7 @@ struct DuneMission
             House[i].MaxUnits = 0;
             House[i].Credits = 0;
             House[i].Quota = 0;
-            House[i].Brain = 'C';
+            House[i].Brain = 0;
         }
 
         Bloom.clear();
@@ -139,10 +139,9 @@ void LoadMission( QString filename )
     QFile f(filename);
     if (!f.open(QIODevice::ReadOnly))
         return;
-    //FILE *log = fopen("log.txt","w");
+
     unsigned char buff[20];
     Mission.Clear();
-    DuneMission::Structure structure;
     for (;;)
     {
         unsigned char cmd;
@@ -150,7 +149,6 @@ void LoadMission( QString filename )
         if (!f.read((char*)&cmd,1))
             break;
         f.read((char*)&subcmd,1);
-        //fprintf(log,"cmd = %d, subcmd = %d, offset = %X\n",cmd,subcmd,ftell(f)-2);
         if (cmd & 0x80)
             break;
         switch(cmd)
@@ -206,7 +204,7 @@ void LoadMission( QString filename )
                     case 'B':
                         f.read((char*)buff,2);
                         Mission.Bloom.resize((buff[0]<<8)|buff[1]);
-                        for (int i=0; i<Mission.Bloom.size(); ++i)
+                        for (size_t i=0; i<Mission.Bloom.size(); ++i)
                             Mission.Bloom[i] = readWord(f);
                         break;
 
@@ -214,14 +212,12 @@ void LoadMission( QString filename )
                     case 'F':
                         f.read((char*)buff,2);
                         Mission.Field.resize((buff[0]<<8)|buff[1]);
-                        for (int i=0; i<Mission.Field.size(); ++i)
+                        for (size_t i=0; i<Mission.Field.size(); ++i)
                             Mission.Field[i] = readWord(f);
                         break;
 
                     case 'S':
                         Mission.MapSeed = readWord(f);
-                        //sprintf(buff,"%d",((buff[0]<<8)|buff[1]));
-                        //MessageBox(NULL,buff,"Seed",MB_OK);
                         break;
                 }
                 break;
@@ -250,8 +246,6 @@ void LoadMission( QString filename )
                     // MaxUnits
                     case 'M':
                         Mission.House[cmd-2].MaxUnits = readWord(f);
-                        //sprintf(buff,"%d(%X)%c",cmd,ftell(f),subcmd);
-                        //MessageBox(NULL,buff,"House",MB_OK);
                         break;
                 }
                 break;
@@ -287,29 +281,32 @@ void LoadMission( QString filename )
                 unit.life  = (buff[ 4]<<8) | buff[ 5];
                 unit.pos   = (buff[ 6]<<8) | buff[ 7];
                 unit.angle = (buff[ 8]<<8) | buff[ 9];
-                unit.ai    = (buff[10]<<8) | buff[12];
+                unit.ai    = (buff[10]<<8) | buff[11];
                 Mission.Units.push_back(unit);
             }
                 break;
             // Structures ( subcmd = unk )
             case 9:
+            {
+                DuneMission::Structure structure;
                 if (subcmd == 'G')
                 {
                     f.read((char*)buff,3*2);
-                    structure.pos   = (buff[ 0]<<8) | buff[ 1];
-                    structure.house = (buff[ 2]<<8) | buff[ 3];
-                    structure.id    = (buff[ 4]<<8) | buff[ 5];
+                    structure.pos   = (buff[0]<<8) | buff[1];
+                    structure.house = (buff[2]<<8) | buff[3];
+                    structure.id    = (buff[4]<<8) | buff[5];
                 }
                 else
                 {
                     f.read((char*)buff,5*2);
-                    structure.flag  = (buff[ 0]<<8) | buff[ 1];
-                    structure.house = (buff[ 2]<<8) | buff[ 3];
-                    structure.id    = (buff[ 4]<<8) | buff[ 5];
-                    structure.life  = (buff[ 6]<<8) | buff[ 7];
-                    structure.pos   = (buff[ 8]<<8) | buff[ 9];
+                    structure.flag  = (buff[0]<<8) | buff[1];
+                    structure.house = (buff[2]<<8) | buff[3];
+                    structure.id    = (buff[4]<<8) | buff[5];
+                    structure.life  = (buff[6]<<8) | buff[7];
+                    structure.pos   = (buff[8]<<8) | buff[9];
                 }
                 Mission.Structures.push_back(structure);
+            }
                 break;
             // Reinforcements
             case 10:
@@ -317,9 +314,9 @@ void LoadMission( QString filename )
                 f.read((char*)buff,4*2);
 
                 DuneMission::Reinforcement r;
-                r.house  = (buff[ 0]<<8) | buff[ 1];
-                r.id     = (buff[ 2]<<8) | buff[ 3];
-                r.pos    = (buff[ 4]<<8) | buff[ 5];
+                r.house  = (buff[0]<<8) | buff[1];
+                r.id     = (buff[2]<<8) | buff[3];
+                r.pos    = (buff[4]<<8) | buff[5];
                 r.delay  = buff[6];
                 r.repeat = buff[7];
                 Mission.Reinforcements.push_back(r);
@@ -328,9 +325,161 @@ void LoadMission( QString filename )
         }
     }
     f.close();
-    //fclose(log);
-    //sprintf((char*)buff,"%d",Units.size());
-    //MessageBox(NULL,(char*)buff,"Units.size()",MB_OK);
+}
+
+static void writecmd(QFile &f, int cmd, int subcmd)
+{
+    static char buff[2];
+    buff[0] = cmd;
+    buff[1] = subcmd;
+    f.write(buff,2);
+}
+
+static void writeWord(QFile &f, int value)
+{
+    static char buff[2];
+    buff[0] = value >> 8;
+    buff[1] = value;
+    f.write(buff,2);
+}
+
+static void writeString(QFile &f, QString string)
+{
+    int len = string.length();
+    if (!(len&1))
+        writeWord(f,len+2);
+    else
+        writeWord(f,len+1);
+    for (int i=0; i<string.length(); ++i)
+        f.putChar(string[i].unicode());
+    f.putChar(0);
+    if (!(len&1))
+        f.putChar(0);
+}
+
+void SaveMission( QString filename )
+{
+    QFile f(filename);
+    if (!f.open(QIODevice::WriteOnly))
+        return;
+
+    writecmd(f,0,0);
+    writeString(f,Mission.LosePicture);
+    writecmd(f,0,1);
+    writeString(f,Mission.WinPicture);
+    writecmd(f,0,2);
+    writeString(f,Mission.BriefPicture);
+    writecmd(f,0,3);
+    writeWord(f,Mission.TimeOut);
+    writecmd(f,0,4);
+    writeWord(f,Mission.MapScale);
+    writecmd(f,0,5);
+    writeWord(f,Mission.CursorPos);
+    writecmd(f,0,6);
+    writeWord(f,Mission.TacticalPos);
+    writecmd(f,0,7);
+    writeWord(f,Mission.LoseFlags);
+    writecmd(f,0,8);
+    writeWord(f,Mission.WinFlags);
+
+    if (Mission.Bloom.size())
+    {
+        writecmd(f,1,'B');
+        writeWord(f,Mission.Bloom.size());
+        for (size_t i=0; i<Mission.Bloom.size(); ++i)
+            writeWord(f,Mission.Bloom[i]);
+    }
+
+    if (Mission.Field.size())
+    {
+        writecmd(f,1,'F');
+        writeWord(f,Mission.Field.size());
+        for (size_t i=0; i<Mission.Field.size(); ++i)
+            writeWord(f,Mission.Field[i]);
+    }
+
+    writecmd(f,1,'S');
+    writeWord(f,Mission.MapSeed);
+
+    for (int i=0; i<4; ++i)
+    if (Mission.House[i].Brain != 0)
+    {
+        writecmd(f,i+2,'Q');
+        writeWord(f,Mission.House[i].Quota);
+        writecmd(f,i+2,'C');
+        writeWord(f,Mission.House[i].Credits);
+        writecmd(f,i+2,'B');
+        writeWord(f,Mission.House[i].Brain);
+        writecmd(f,i+2,'M');
+        writeWord(f,Mission.House[i].MaxUnits);
+    }
+
+    for (size_t i=0; i<Mission.Starport.size(); ++i)
+    {
+        writecmd(f,6,Mission.Starport[i].unit);
+        writeWord(f,Mission.Starport[i].count);
+    }
+
+    for (size_t i=0; i<Mission.Teams.size(); ++i)
+    {
+        DuneMission::Team &team = Mission.Teams[i];
+        writecmd(f,7,i+1);
+        writeWord(f,team.house);
+        writeWord(f,team.ai);
+        writeWord(f,team.type);
+        writeWord(f,team.min);
+        writeWord(f,team.max);
+    }
+
+    for (size_t i=0; i<Mission.Units.size(); ++i)
+    {
+        DuneMission::Unit &unit = Mission.Units[i];
+        writecmd(f,8,i+1);
+        writeWord(f,unit.house);
+        writeWord(f,unit.id);
+        writeWord(f,unit.life);
+        writeWord(f,unit.pos);
+        writeWord(f,unit.angle);
+        writeWord(f,unit.ai);
+    }
+
+    for (size_t i=0; i<Mission.Structures.size(); ++i)
+    {
+        DuneMission::Structure &structure = Mission.Structures[i];
+        if (structure.id == 0 // concrate
+         || structure.id == 0xE) // wall
+        {
+            writecmd(f,9,'G');
+            writeWord(f,structure.pos);
+            writeWord(f,structure.house);
+            writeWord(f,structure.id);
+        }
+        else
+        {
+            writecmd(f,9,'I');
+            writeWord(f,structure.flag);
+            writeWord(f,structure.house);
+            writeWord(f,structure.id);
+            writeWord(f,structure.life);
+            writeWord(f,structure.pos);
+        }
+    }
+
+    for (size_t i=0; i<Mission.Reinforcements.size(); ++i)
+    {
+        DuneMission::Reinforcement &r = Mission.Reinforcements[i];
+        writecmd(f,10,i+1);
+        writeWord(f,r.house);
+        writeWord(f,r.id);
+        writeWord(f,r.pos);
+        f.putChar(r.delay);
+        f.putChar(r.repeat);
+    }
+
+    // END
+    writeWord(f,0xFFFF);
+
+    f.close();
 }
 
 #endif // MISSIONPARSER_H

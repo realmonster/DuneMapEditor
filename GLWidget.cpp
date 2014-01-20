@@ -884,7 +884,7 @@ void Window::openMission()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Mission"));
     if (!fileName.isEmpty())
-        LoadMission(fileName.toLocal8Bit().data());
+        LoadMission(fileName);
 }
 
 void Window::saveMap()
@@ -892,6 +892,13 @@ void Window::saveMap()
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
     if (!fileName.isEmpty())
         SaveMap(fileName.toLocal8Bit().data());
+}
+
+void Window::saveMission()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Mission"));
+    if (!fileName.isEmpty())
+        SaveMission(fileName);
 }
 
 void Window::options()
@@ -932,6 +939,10 @@ void Window::createMenus()
     saveMapAct->setStatusTip(tr("Save the map to disk"));
     connect(saveMapAct, SIGNAL(triggered()), this, SLOT(saveMap()));
 
+    saveMissionAct = new QAction(tr("Save Mission"), this);
+    saveMissionAct->setStatusTip(tr("Save the mission to disk"));
+    connect(saveMissionAct, SIGNAL(triggered()), this, SLOT(saveMission()));
+
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
@@ -943,6 +954,7 @@ void Window::createMenus()
     fileMenu->addAction(openMapAct);
     fileMenu->addAction(openMissionAct);
     fileMenu->addAction(saveMapAct);
+    fileMenu->addAction(saveMissionAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 
