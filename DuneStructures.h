@@ -3,12 +3,12 @@
 
 struct DrawInfos
 {
-	int x,y,width,height;
+    int x,y,width,height,colored;
 } StructureDrawInfos[] = {
 // 0: Concrete
-{448,0,32,32},
+{448,0,32,32,1},
 // 1: Concrete 2x2
-{448,0,64,64},
+{448,0,64,64,1},
 // 2: Palace
 {0,0,96,96},
 // 3: Vehicle
@@ -34,11 +34,11 @@ struct DrawInfos
 // D: Repair
 {192,64,96,64},
 // E: Wall
-{128,160,32,32},
+{128,160,32,32,1},
 // F: Turret
-{224,128,32,32},
+{224,128,32,32,1},
 // 10: Rocket Turret
-{256,128,32,32},
+{256,128,32,32,1},
 // 11: Silos
 {384,64,64,64},
 // 12: Outpost

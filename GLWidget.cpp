@@ -591,6 +591,14 @@ void GLWidget::paintGL()
 	if (showunits)
 	{
         double pi = qAcos(-1.0);
+        static struct {double r,g,b;} houses[] = {
+            {1.0f, 0.7f, 0.7f},
+            {0.7f, 0.8f, 1.0f},
+            {0.7f, 1.0f, 0.7f},
+            {0.8f, 0.8f, 0.8f},
+            {0.8f, 0.6f, 0.8f},
+        };
+            ;
         glColor4f(1.f,1.f,1.f,1.f);
         glEnable( GL_BLEND );
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -602,13 +610,18 @@ void GLWidget::paintGL()
             int x = (Mission.Structures[i].pos&0x3F);
             int y = (Mission.Structures[i].pos/0x40);
             int id = Mission.Structures[i].id;
+            auto &h = houses[Mission.Structures[i].house];
 			DrawInfos si = StructureDrawInfos[id];
+            //if (si.colored)
+                glColor4f(h.r,h.g,h.b,1.f);
+            //else
+            //    glColor4f(1.f,1.f,1.f,1.f);
             glTexCoord2d((si.x+       0)/512.0,(si.y+        0)/512.0); glVertex2d(x,            -y);
             glTexCoord2d((si.x+si.width)/512.0,(si.y+        0)/512.0); glVertex2d(x+si.width/32,-y);
             glTexCoord2d((si.x+si.width)/512.0,(si.y+si.height)/512.0); glVertex2d(x+si.width/32,-(y+si.height/32));
             glTexCoord2d((si.x+       0)/512.0,(si.y+si.height)/512.0); glVertex2d(x,            -(y+si.height/32));
 
-            if (id >= 2)
+            if (!si.colored)
             {
                 int idx = 6+Mission.Structures[i].house;
                 int idy = 8;
@@ -621,6 +634,8 @@ void GLWidget::paintGL()
             }
 		}
 		glEnd();
+
+        glColor4f(1.f,1.f,1.f,1.f);
 
         glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
