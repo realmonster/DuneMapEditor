@@ -483,6 +483,71 @@ GLuint GenerateGround()
 	return MakeGreyTexture();
 }
 
+int unitPos(int x, int y)
+{
+    if (x >= 0 && x <= 0x3F
+     && y >= 0 && y <= 0x3F)
+        return x + y*0x40;
+    return -1;
+}
+
+void unitPos(int pos, int *x, int *y)
+{
+    if (pos >= 0x40*0x40 || pos < 0)
+    {
+        *x = -1;
+        return;
+    }
+    *x = pos & 0x3F;
+    *y = pos >> 6;
+}
+
+int unitAtPos(int pos, int i=0)
+{
+    for (; i<Mission.Units.size(); ++i)
+        if (Mission.Units[i].pos == pos)
+            return i;
+    return -1;
+}
+
+int unitAt(int x, int y, int i=0)
+{
+    int pos = unitPos(x, y);
+    if (pos != -1)
+        return unitAtPos(pos, i);
+    return -1;
+}
+
+int structureAt(int x, int y, int i=0)
+{
+    for (; i<Mission.Structures.size(); ++i)
+    {
+        DuneMission::Structure &s = Mission.Structures[i];
+        DrawInfos &di = StructureDrawInfos[s.id];
+        int sx, sy, sw, sh;
+        unitPos(s.pos, &sx, &sy);
+        sw = di.width/32;
+        sh = di.height/32;
+        if (sx != -1)
+        {
+            if (x >= sx && x < sx + sw
+             && y >= sy && y < sy + sh)
+                return i;
+        }
+    }
+    return -1;
+}
+
+int structureAtPos(int pos, int i=0)
+{
+    int x, y;
+    unitPos(pos, &x, &y);
+    if (x != -1)
+        return structureAt(x, y, i);
+    return -1;
+}
+
+
 void GLWidget::initializeGL()
 {
     // load our texture
@@ -789,16 +854,28 @@ struct BuildStructureTool : MouseTool
                 QPointF c = worldCursor(sender,event);
                 int x = c.x();
                 int y = c.y();
-                if (x >= 0 && x <= 0x3F
-                 && y >= 0 && y <= 0x3F)
+                int pos = unitPos(x, y);
+                if (pos != -1)
                 {
-                    DuneMission::Structure s;
-                    s.id = id;
-                    s.house = sender->getHouseSelected();
-                    s.flag = 0;
-                    s.life = 0x100;
-                    s.pos = x + y * 0x40;
-                    Mission.Structures.push_back(s);
+                    DrawInfos &di = StructureDrawInfos[id];
+                    int w = di.width/32;
+                    int h = di.height/32;
+                    bool was = false;
+                    for (int j=0; j<h && !was; ++j)
+                        for (int i=0; i<w && !was; ++i)
+                            if (structureAt(x+i, y+j) != -1
+                        ||(id > 1 && unitAt(x+i, y+j) != -1))
+                                    was = true;
+                    if (!was)
+                    {
+                        DuneMission::Structure s;
+                        s.id = id;
+                        s.house = sender->getHouseSelected();
+                        s.flag = 0;
+                        s.life = 0x100;
+                        s.pos = pos;
+                        Mission.Structures.push_back(s);
+                    }
                 }
             }
                 break;
@@ -818,19 +895,28 @@ struct BuildUnitTool : MouseTool
             case Qt::LeftButton:
             {
                 QPointF c = worldCursor(sender, event);
-                int x = c.x();
-                int y = c.y();
-                if (x >= 0 && x <= 0x3F
-                 && y >= 0 && y <= 0x3F)
+                int pos = unitPos(c.x(),c.y());
+                if (pos != -1
+                 && unitAtPos(pos) == -1)
                 {
-                    DuneMission::Unit s;
-                    s.id = id;
-                    s.house = sender->getHouseSelected();
-                    s.angle = 0;
-                    s.ai = 0;
-                    s.life = 0x100;
-                    s.pos = x + y * 0x40;
-                    Mission.Units.push_back(s);
+                    bool was = false;
+                    for (int i = structureAtPos(pos); i != -1; i = structureAtPos(pos, i+1))
+                        if (Mission.Structures[i].id > 1) // not Wall
+                        {
+                            was = true;
+                            break;
+                        }
+                    if (!was)
+                    {
+                        DuneMission::Unit s;
+                        s.id = id;
+                        s.house = sender->getHouseSelected();
+                        s.angle = 0;
+                        s.ai = 0;
+                        s.life = 0x100;
+                        s.pos = pos;
+                        Mission.Units.push_back(s);
+                    }
                 }
             }
                 break;
