@@ -591,7 +591,7 @@ void GLWidget::paintGL()
 	if (showunits)
 	{
         double pi = qAcos(-1.0);
-        static struct {double r,g,b;} houses[] = {
+        static struct Houses {double r,g,b;} houses[] = {
             {1.0f, 0.7f, 0.7f},
             {0.7f, 0.8f, 1.0f},
             {0.7f, 1.0f, 0.7f},
@@ -610,7 +610,7 @@ void GLWidget::paintGL()
             int x = (Mission.Structures[i].pos&0x3F);
             int y = (Mission.Structures[i].pos/0x40);
             int id = Mission.Structures[i].id;
-            auto &h = houses[Mission.Structures[i].house];
+            Houses &h = houses[Mission.Structures[i].house];
 			DrawInfos si = StructureDrawInfos[id];
             //if (si.colored)
                 glColor4f(h.r,h.g,h.b,1.f);
@@ -918,6 +918,8 @@ void Window::saveMission()
 
 void Window::options()
 {
+    OptionsWindow opts;
+    opts.exec();
 }
 
 void Window::help()
@@ -1352,4 +1354,43 @@ void Window::wheelEvent(QWheelEvent *event)
 	}
 
     event->accept();
+}
+
+void OptionsWindow::saveOptions()
+{
+    //settings.animation = animationCheckBox->checkState();
+    //settings.coloring = coloringCheckBox->checkState();
+    this->close();
+}
+
+OptionsWindow::OptionsWindow()
+{
+    hintsGroupBox = new QGroupBox(tr("Misc"));
+
+    animationCheckBox = new QCheckBox(tr("Animation"));
+    animationCheckBox->setChecked(/*settings.animation*/false);
+    coloringCheckBox = new QCheckBox(tr("Coloring"));
+    coloringCheckBox->setChecked(/*settings.coloring*/false);
+
+    QGridLayout *layout = new QGridLayout;
+    layout->addWidget(animationCheckBox, 0, 0);
+    layout->addWidget(coloringCheckBox, 1, 0);
+    hintsGroupBox->setLayout(layout);
+
+    okButton = new QPushButton(tr("Ok"));
+    connect(okButton, SIGNAL(clicked()), this, SLOT(saveOptions()));
+    cancelButton = new QPushButton(tr("Cancel"));
+    connect(cancelButton, SIGNAL(clicked()), this, SLOT(close()));
+
+    QHBoxLayout *bottomLayout = new QHBoxLayout;
+    bottomLayout->addStretch();
+    bottomLayout->addWidget(okButton);
+    bottomLayout->addWidget(cancelButton);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(hintsGroupBox);
+    mainLayout->addLayout(bottomLayout);
+    setLayout(mainLayout);
+
+    setWindowTitle(tr("Options"));
 }

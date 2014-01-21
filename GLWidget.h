@@ -2,8 +2,11 @@
 #define _GLWIDGET_H_
 
 #include <QMainWindow>
+#include <QDialog>
 #include <QMenu>
 #include <QGLWidget>
+#include <QCheckBox>
+#include <QGroupBox>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QTimer>
@@ -102,6 +105,25 @@ private:
     QToolButton *unitsButton[50];
     QToolButton *groundButton[5];
     QToolButton *houseButton[5];
+};
+
+class OptionsWindow : public QDialog
+{
+    Q_OBJECT
+
+public:
+    OptionsWindow();
+
+private slots:
+    void saveOptions();
+
+private:
+    QGroupBox *hintsGroupBox;
+    QPushButton *okButton;
+    QPushButton *cancelButton;
+
+    QCheckBox *animationCheckBox;
+    QCheckBox *coloringCheckBox;
 };
 
 #endif // _GLWIDGET_H_
