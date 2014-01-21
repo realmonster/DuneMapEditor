@@ -845,41 +845,47 @@ struct BuildStructureTool : MouseTool
     int id;
 
     BuildStructureTool(int _id) : id(_id) {}
+
+    void place(Window *sender, QMouseEvent *event)
+    {
+        QPointF c = worldCursor(sender,event);
+        int x = c.x();
+        int y = c.y();
+        int pos = unitPos(x, y);
+        if (pos != -1)
+        {
+            DrawInfos &di = StructureDrawInfos[id];
+            int w = di.width/32;
+            int h = di.height/32;
+            bool was = false;
+            for (int j=0; j<h && !was; ++j)
+                for (int i=0; i<w && !was; ++i)
+                    if (structureAt(x+i, y+j) != -1
+                ||(id > 1 && unitAt(x+i, y+j) != -1))
+                            was = true;
+            if (!was)
+            {
+                DuneMission::Structure s;
+                s.id = id;
+                s.house = sender->getHouseSelected();
+                s.flag = 0;
+                s.life = 0x100;
+                s.pos = pos;
+                Mission.Structures.push_back(s);
+            }
+        }
+    }
+
     void mousePress(Window *sender, QMouseEvent *event)
     {
-        switch (event->button())
-        {
-            case Qt::LeftButton:
-            {
-                QPointF c = worldCursor(sender,event);
-                int x = c.x();
-                int y = c.y();
-                int pos = unitPos(x, y);
-                if (pos != -1)
-                {
-                    DrawInfos &di = StructureDrawInfos[id];
-                    int w = di.width/32;
-                    int h = di.height/32;
-                    bool was = false;
-                    for (int j=0; j<h && !was; ++j)
-                        for (int i=0; i<w && !was; ++i)
-                            if (structureAt(x+i, y+j) != -1
-                        ||(id > 1 && unitAt(x+i, y+j) != -1))
-                                    was = true;
-                    if (!was)
-                    {
-                        DuneMission::Structure s;
-                        s.id = id;
-                        s.house = sender->getHouseSelected();
-                        s.flag = 0;
-                        s.life = 0x100;
-                        s.pos = pos;
-                        Mission.Structures.push_back(s);
-                    }
-                }
-            }
-                break;
-        }
+        if (event->button() == Qt::LeftButton)
+            place(sender, event);
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        if (event->buttons() & Qt::LeftButton)
+            place(sender, event);
     }
 };
 
@@ -888,39 +894,45 @@ struct BuildUnitTool : MouseTool
     int id;
 
     BuildUnitTool(int _id) : id(_id) {}
+
+    void place (Window *sender, QMouseEvent *event)
+    {
+        QPointF c = worldCursor(sender, event);
+        int pos = unitPos(c.x(),c.y());
+        if (pos != -1
+         && unitAtPos(pos) == -1)
+        {
+            bool was = false;
+            for (int i = structureAtPos(pos); i != -1; i = structureAtPos(pos, i+1))
+                if (Mission.Structures[i].id > 1) // not Wall
+                {
+                    was = true;
+                    break;
+                }
+            if (!was)
+            {
+                DuneMission::Unit s;
+                s.id = id;
+                s.house = sender->getHouseSelected();
+                s.angle = 0;
+                s.ai = 0;
+                s.life = 0x100;
+                s.pos = pos;
+                Mission.Units.push_back(s);
+            }
+        }
+    }
+
     void mousePress(Window *sender, QMouseEvent *event)
     {
-        switch (event->button())
-        {
-            case Qt::LeftButton:
-            {
-                QPointF c = worldCursor(sender, event);
-                int pos = unitPos(c.x(),c.y());
-                if (pos != -1
-                 && unitAtPos(pos) == -1)
-                {
-                    bool was = false;
-                    for (int i = structureAtPos(pos); i != -1; i = structureAtPos(pos, i+1))
-                        if (Mission.Structures[i].id > 1) // not Wall
-                        {
-                            was = true;
-                            break;
-                        }
-                    if (!was)
-                    {
-                        DuneMission::Unit s;
-                        s.id = id;
-                        s.house = sender->getHouseSelected();
-                        s.angle = 0;
-                        s.ai = 0;
-                        s.life = 0x100;
-                        s.pos = pos;
-                        Mission.Units.push_back(s);
-                    }
-                }
-            }
-                break;
-        }
+        if (event->button() == Qt::LeftButton)
+            place(sender, event);
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        if (event->buttons() & Qt::LeftButton)
+            place(sender, event);
     }
 };
 
