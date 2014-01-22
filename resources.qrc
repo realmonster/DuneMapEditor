@@ -51,5 +51,6 @@
         <file>house/house2.png</file>
         <file>house/house3.png</file>
         <file>house/house4.png</file>
+        <file>other/arrow.png</file>
     </qresource>
 </RCC>

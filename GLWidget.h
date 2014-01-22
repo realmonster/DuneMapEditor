@@ -84,6 +84,7 @@ private:
     QMenu *fileMenu;
     QMenu *optionsMenu;
     QMenu *helpMenu;
+    QToolBar *mainTools;
     QToolBar *structuresMenu;
     QToolBar *unitsMenu;
     QToolBar *groundMenu;
@@ -101,6 +102,7 @@ private:
     QTimer *radarsTimer;
     QSlider *drawSizeSlider;
 
+    QToolButton *arrowButton;
     QToolButton *structuresButton[50];
     QToolButton *unitsButton[50];
     QToolButton *groundButton[5];

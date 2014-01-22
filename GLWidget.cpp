@@ -21,15 +21,11 @@ struct POINT
 
 POINT camera = {0,0};
 POINT mouse;
-bool mouse1down = false;
-bool mouse2down = false;
 
 double zoom = 1;
 bool showgrey = false;
 bool showunits = true;
 int state = 0;
-//int drawtype = 0;
-int drawsize = 1;
 bool drawinverse = false;
 
 struct Ground
@@ -199,6 +195,8 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
 
 	// open texture data
     QImage img(filename);
+    if (img.isNull())
+        return 0;
 
 	// allocate buffer
     width = img.width();
@@ -210,14 +208,14 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
         for (p.ry()=0; p.ry()<height; ++p.ry())
         {
             QColor c = QColor(img.pixel(p));
-            int i = p.rx()+p.ry()*width;
+            int i = p.rx() + p.ry()*width;
             data[i*4] = c.red();
             data[i*4+1] = c.green();
             data[i*4+2] = c.blue();
             data[i*4+3] = c.alpha();
-            if (c.red()>0xE0
+            if (c.red()   >  0xE0
              && c.green() == 0
-             && c.blue()>0xE0)
+             && c.blue()  >  0xE0)
                 data[i*4+3] = 0;
         }
 
@@ -253,41 +251,42 @@ GLuint LoadTextureRAW( const char * filename, int wrap )
 
 }
 
-GLuint LoadGreyTexture( const char * filename )
+GLuint LoadGreyTexture( QString filename )
 {
-	GLuint texture;
 	int width, height;
-	unsigned char * data;
-	FILE * file;
-	FILE *f;
-	unsigned char tmp;
-	int i;
+    unsigned char * data;
 
 	// open texture data
-	file = fopen( filename, "rb" );
-	if ( file == NULL ) return 0;
+    QImage img(filename);
+    if (img.isNull())
+        return 0;
 
-	// allocate buffer
-	width = 128;
-	height = 128;
-	data = (unsigned char*)malloc( width * height * 4 );
+    // allocate buffer
+    width = img.width();
+    height = img.height();
+    if (width  != 128
+     || height != 128)
+        return 0;
 
-	// read texture data
+    data = (unsigned char*)malloc( width * height * 4 );
 
-	fseek( file, 0x36, SEEK_SET);
-	fread( data, width * height * 3, 1, file );
-	fclose( file );
+    QPoint p;
+    for (p.rx()=0; p.rx()<width; ++p.rx())
+        for (p.ry()=0; p.ry()<height; ++p.ry())
+        {
+            QColor c = QColor(img.pixel(p));
+            int i = p.rx() + p.ry()*width;
+            int all = c.red() + c.green() + c.blue();
+            all /= 3;
+            data[i*4] = all;
+            data[i*4+1] = all;
+            data[i*4+2] = all;
+            data[i*4+3] = 1;
 
-	for (i=0; i<width*height; ++i)
-	{
-		int all = 0;
-		for (int j=0; j<3; ++j)
-			all += data[i*3+j];
-		all /= 3;
-		g[i%width][width - 1 - i/width] = all/255.0;
-	}
+            g[i%width][i/width] = all/255.0;
+        }
 
-	free(data);
+    free(data);
 
 	return MakeGreyTexture();
 }
@@ -502,7 +501,7 @@ void unitPos(int pos, int *x, int *y)
     *y = pos >> 6;
 }
 
-int unitAtPos(int pos, int i=0)
+int unitAtPos(int pos, size_t i=0)
 {
     for (; i<Mission.Units.size(); ++i)
         if (Mission.Units[i].pos == pos)
@@ -510,7 +509,7 @@ int unitAtPos(int pos, int i=0)
     return -1;
 }
 
-int unitAt(int x, int y, int i=0)
+int unitAt(int x, int y, size_t i=0)
 {
     int pos = unitPos(x, y);
     if (pos != -1)
@@ -518,7 +517,7 @@ int unitAt(int x, int y, int i=0)
     return -1;
 }
 
-int structureAt(int x, int y, int i=0)
+int structureAt(int x, int y, size_t i=0)
 {
     for (; i<Mission.Structures.size(); ++i)
     {
@@ -538,7 +537,7 @@ int structureAt(int x, int y, int i=0)
     return -1;
 }
 
-int structureAtPos(int pos, int i=0)
+int structureAtPos(int pos, size_t i=0)
 {
     int x, y;
     unitPos(pos, &x, &y);
@@ -670,7 +669,7 @@ void GLWidget::paintGL()
 
 		glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
-        for (int i = 0; i < Mission.Structures.size(); ++i)
+        for (size_t i = 0; i < Mission.Structures.size(); ++i)
 		{
             int x = (Mission.Structures[i].pos&0x3F);
             int y = (Mission.Structures[i].pos/0x40);
@@ -705,7 +704,7 @@ void GLWidget::paintGL()
         glBindTexture( GL_TEXTURE_2D, StructuresTexture );
 		glBegin( GL_QUADS );
 
-        for (int i = 0; i < Mission.Units.size(); ++i)
+        for (size_t i = 0; i < Mission.Units.size(); ++i)
 		{
             int x = (Mission.Units[i].pos&0x3F);
             int y = (Mission.Units[i].pos/0x40);
@@ -755,32 +754,32 @@ void FreeTexture( GLuint texture )
 	glDeleteTextures( 1, &texture );
 }
 
-void LoadMap( const char * filename )
+void LoadMap( QString filename )
 {
-    FILE *f = fopen(filename, "rb");
-    if (!f)
+    QFile f(filename);
+    if (!f.open(QIODevice::ReadOnly))
         return;
     unsigned char tmp;
     duneGround.Clear();
     for (int y=0; y<duneGround.height; ++y)
         for (int x=0; x<duneGround.width; ++x)
         {
-            fread(&tmp,1,1,f);
+            f.read((char*)&tmp,1);
             duneGround[x][y]=tmp;
             duneGround.SetTileMask(x,y);
         }
-    fclose(f);
+    f.close();
 }
 
-void SaveMap( const char * filename )
+void SaveMap( QString filename )
 {
-    FILE *f = fopen(filename,"wb");
-    if (!f)
+    QFile f(filename);
+    if (!f.open(QIODevice::WriteOnly))
     	return;
     for (int y=0; y<duneGround.height; ++y)
 	    for (int x=0; x<duneGround.width; ++x)
-	         fwrite(&duneGround[x][y],1,1,f);
-    fclose(f);
+             f.write((char*)&duneGround[x][y],1);
+    f.close();
 }
 
 struct DrawGround : MouseTool
@@ -790,27 +789,15 @@ struct DrawGround : MouseTool
 
     void mousePress(Window *sender, QMouseEvent *event)
     {
-        switch (event->button())
+        if (event->button() == Qt::LeftButton)
         {
-            case Qt::LeftButton:
-                mouse.x = event->x()-sender->glWidget->x();
-                mouse.y = event->y()-sender->glWidget->y();
-                if (state == 2)
-                {
-                    duneGround = duneGroundNew;
-                    ChangeState(0);
-                }
-                mouse1down = true;
-                break;
-        }
-    }
-    void mouseRelease(Window *sender, QMouseEvent *event)
-    {
-        switch (event->button())
-        {
-            case Qt::LeftButton:
-                mouse1down = false;
-                break;
+            mouse.x = event->x()-sender->glWidget->x();
+            mouse.y = event->y()-sender->glWidget->y();
+            if (state == 2)
+            {
+                duneGround = duneGroundNew;
+                ChangeState(0);
+            }
         }
     }
 
@@ -820,7 +807,7 @@ struct DrawGround : MouseTool
         mouse.x = event->x()-sender->glWidget->x();
         mouse.y = event->y()-sender->glWidget->y();
 
-        if (mouse2down)
+        if (event->buttons() & Qt::RightButton)
         {
             camera.x -= mouse.x-pos.x;
             camera.y -= mouse.y-pos.y;
@@ -829,7 +816,9 @@ struct DrawGround : MouseTool
         QPointF c = worldCursor(sender);
         double cx = c.rx()*2+0.5;
         double cy = c.ry()*2+0.5;
-        if (state == 1 && duneGround.tin(cx,cy) && mouse1down/*(GetKeyState(VK_LBUTTON) & 0x80)*/)
+        if ((event->buttons() & Qt::LeftButton)
+         && state == 1
+         && duneGround.tin(cx,cy))
         {
             int drawsize = sender->getDrawSize();
             for (int x=0; x<drawsize; ++x)
@@ -1111,6 +1100,14 @@ void Window::createToolbars()
         "dune",
     };
 
+    mainTools = this->addToolBar(tr("Main"));
+
+    arrowButton = new QToolButton();
+    arrowButton->setIcon(QIcon(":/other/arrow.png"));
+    arrowButton->setCheckable(true);
+    mainTools->addWidget(arrowButton);
+    connect(arrowButton, SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
+
     groundMenu = this->addToolBar(tr("Ground"));
 
     for (int z=0; z<sizeof(gorder)/sizeof(gorder[0]); ++z)
@@ -1214,7 +1211,7 @@ void Window::createToolbars()
     }
 }
 
-void Window::house(bool checked)
+void Window::house(bool)
 {
     QObject *sender = QObject::sender();
     for (int i=0; i<5; ++i)
@@ -1236,7 +1233,7 @@ int Window::getHouseSelected()
     return houseSelected;
 }
 
-void Window::tool(bool checked)
+void Window::tool(bool)
 {
     QObject *sender = QObject::sender();
     for (int i=0; i<50; ++i)
@@ -1329,7 +1326,7 @@ void Window::keyPressEvent(QKeyEvent *event)
                 if (!fileName.isEmpty())
                 {
                     FreeTexture(GroundGrey);
-                    GroundGrey = LoadGreyTexture(fileName.toLocal8Bit().data());
+                    GroundGrey = LoadGreyTexture(fileName);
                 }
             }
 			break;
@@ -1391,13 +1388,10 @@ void Window::mousePressEvent(QMouseEvent *event)
 {
     if (currentMouseTool)
         currentMouseTool->mousePress(this,event);
-    switch(event->button())
+    if (event->button() == Qt::RightButton)
     {
-        case Qt::RightButton:
-            mouse.x = event->x()-glWidget->x();
-            mouse.y = event->y()-glWidget->y();
-            mouse2down = true;
-            break;
+        mouse.x = event->x()-glWidget->x();
+        mouse.y = event->y()-glWidget->y();
     }
 }
 
@@ -1405,14 +1399,6 @@ void Window::mouseReleaseEvent(QMouseEvent *event)
 {
     if (currentMouseTool)
         currentMouseTool->mouseRelease(this,event);
-    switch (event->button())
-    {
-        case Qt::RightButton:
-            mouse2down = false;
-            break;
-        default:
-            break;
-    }
 }
 
 void Window::mouseMoveEvent(QMouseEvent* event)
@@ -1422,9 +1408,8 @@ void Window::mouseMoveEvent(QMouseEvent* event)
     POINT pos = mouse;
     mouse.x = event->x()-glWidget->x();
     mouse.y = event->y()-glWidget->y();
-    //this->statusBar()->showMessage(QString().sprintf("(%d,%d)",mouse.x,mouse.y));
 
-    if (mouse2down)
+    if (event->buttons() & Qt::RightButton)
     {
         camera.x -= mouse.x-pos.x;
         camera.y -= mouse.y-pos.y;
