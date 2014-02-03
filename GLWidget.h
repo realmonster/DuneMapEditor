@@ -78,6 +78,7 @@ private:
     void buildUnit(int id);
     void drawGround(int type);
     void selectHouse(int id);
+    void select();
 
     int houseSelected;
 

@@ -70,6 +70,7 @@ struct MouseTool
     virtual void mouseMove(Window *sender, QMouseEvent *event) {}
     virtual void mousePress(Window *sender, QMouseEvent *event) {}
     virtual void mouseRelease(Window *sender, QMouseEvent *event) {}
+    virtual ~MouseTool() {}
 };
 
 void ChangeState(int _state)
@@ -546,6 +547,75 @@ int structureAtPos(int pos, size_t i=0)
     return -1;
 }
 
+struct Selection
+{
+    std::vector<int> Structures;
+    std::vector<int> Units;
+
+    void clear()
+    {
+        Structures.clear();
+        Units.clear();
+    }
+
+    void addStructure(int id)
+    {
+        for (size_t i=0; i<Structures.size(); ++i)
+            if (Structures[i] == id)
+                return;
+        Structures.push_back(id);
+    }
+
+    void removeStructure(int id)
+    {
+        for (size_t i=0; i<Structures.size(); ++i)
+            if (Structures[i] == id)
+                Structures.erase(Structures.begin()+i);
+    }
+
+    void addUnit(int id)
+    {
+        for (size_t i=0; i<Units.size(); ++i)
+            if (Units[i] == id)
+                return;
+        Units.push_back(id);
+    }
+
+    void removeUnit(int id)
+    {
+        for (size_t i=0; i<Units.size(); ++i)
+            if (Units[i] == id)
+                Units.erase(Units.begin()+i);
+    }
+} CurrentSelection;
+
+
+void DeleteSelected()
+{
+    for (size_t i=0; i<CurrentSelection.Structures.size(); ++i)
+    {
+        int id = CurrentSelection.Structures[i];
+        Mission.Structures.erase(Mission.Structures.begin()+id);
+
+        // decrease numbers
+        for (size_t j=i+1; j<CurrentSelection.Structures.size(); ++j)
+            if (CurrentSelection.Structures[j]>id)
+                --CurrentSelection.Structures[j];
+    }
+
+    for (size_t i=0; i<CurrentSelection.Units.size(); ++i)
+    {
+        int id = CurrentSelection.Units[i];
+        Mission.Units.erase(Mission.Units.begin()+id);
+
+        // decrease numbers
+        for (size_t j=i+1; j<CurrentSelection.Units.size(); ++j)
+            if (CurrentSelection.Units[j]>id)
+                --CurrentSelection.Units[j];
+    }
+    CurrentSelection.clear();
+}
+
 
 void GLWidget::initializeGL()
 {
@@ -719,6 +789,37 @@ void GLWidget::paintGL()
             glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+0.5+0.5*cos(a)-0.5*sin(a),-(y+0.5+0.5*sin(a)+0.5*cos(a)));
             glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x+0.5-0.5*cos(a)-0.5*sin(a),-(y+0.5-0.5*sin(a)+0.5*cos(a)));
 		}
+
+        if (radarsAngle&2)
+        {
+            for (size_t i = 0; i < CurrentSelection.Structures.size(); ++i)
+            {
+                int x, y;
+                int id = CurrentSelection.Structures[i];
+                DuneMission::Structure &s = Mission.Structures[id];
+                DrawInfos &di = StructureDrawInfos[s.id];
+                unitPos(s.pos, &x, &y);
+                double tx = 99/512.0;
+                double ty = 163/512.0;
+                double w = 26/512.0;
+                glTexCoord2d(tx  ,ty  ); glVertex2d(x              ,-(y  ));
+                glTexCoord2d(tx+w,ty  ); glVertex2d(x+1*di.width/32,-(y  ));
+                glTexCoord2d(tx+w,ty+w); glVertex2d(x+1*di.width/32,-(y+1*di.height/32));
+                glTexCoord2d(tx  ,ty+w); glVertex2d(x              ,-(y+1*di.height/32));
+            }
+            for (size_t i = 0; i < CurrentSelection.Units.size(); ++i)
+            {
+                int x, y;
+                int id = CurrentSelection.Units[i];
+                unitPos(Mission.Units[id].pos, &x, &y);
+                int idx = 6;
+                int idy = 4;
+                glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x+0.5-0.5,-(y+0.5-0.5));
+                glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+0.5+0.5,-(y+0.5-0.5));
+                glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+0.5+0.5,-(y+0.5+0.5));
+                glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x+0.5-0.5,-(y+0.5+0.5));
+            }
+        }
 		glEnd();
         glDisable( GL_BLEND );
 	}
@@ -782,10 +883,72 @@ void SaveMap( QString filename )
     f.close();
 }
 
+struct SelectTool : MouseTool
+{
+    bool move;
+    QPointF downPos;
+    SelectTool() {move = false;}
+
+    void mousePress(Window *sender, QMouseEvent *event)
+    {
+        if (event->button() == Qt::LeftButton)
+        {
+            downPos = worldCursor(sender, event);
+            if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier)))
+                CurrentSelection.clear();
+
+            int pos = unitPos(downPos.x(),downPos.y());
+            if (event->modifiers() & Qt::AltModifier)
+            {
+                for (int i = structureAtPos(pos); i != -1; i = structureAtPos(pos, i+1))
+                    CurrentSelection.removeStructure(i);
+                for (int i = unitAtPos(pos); i != -1; i = unitAtPos(pos, i+1))
+                    CurrentSelection.removeUnit(i);
+            }
+            else
+            {
+                for (int i = structureAtPos(pos); i != -1; i = structureAtPos(pos, i+1))
+                    CurrentSelection.addStructure(i);
+                for (int i = unitAtPos(pos); i != -1; i = unitAtPos(pos, i+1))
+                    CurrentSelection.addUnit(i);
+            }
+        }
+    }
+
+    void mouseMove(Window *sender, QMouseEvent *event)
+    {
+        if (event->buttons() & Qt::LeftButton)
+        {
+            QPointF c = worldCursor(sender,event) - downPos;
+            int dx = c.x();
+            int dy = c.y();
+            for (size_t i=0; i<CurrentSelection.Structures.size(); ++i)
+            {
+                int id = CurrentSelection.Structures[i];
+                DuneMission::Structure &s = Mission.Structures[id];
+                int x, y;
+                unitPos(s.pos,&x,&y);
+                s.pos = unitPos(x+dx,y+dy);
+            }
+            for (size_t i=0; i<CurrentSelection.Units.size(); ++i)
+            {
+                int id = CurrentSelection.Units[i];
+                DuneMission::Unit &u = Mission.Units[id];
+                int x, y;
+                unitPos(u.pos,&x,&y);
+                u.pos = unitPos(x+dx,y+dy);
+            }
+            downPos.rx() += dx;
+            downPos.ry() += dy;
+        }
+    }
+};
+
 struct DrawGround : MouseTool
 {
     int id;
-    DrawGround(int _id) : id(_id) {}
+    DrawGround(int _id) : id(_id) {ChangeState(1);}
+    ~DrawGround(){ChangeState(0);}
 
     void mousePress(Window *sender, QMouseEvent *event)
     {
@@ -944,7 +1107,7 @@ Window::Window()
     connect(radarsTimer, SIGNAL(timeout()), this, SLOT(updateRadars()));
     radarsTimer->start(133);
 
-    currentMouseTool = new DrawGround(0);
+    currentMouseTool = new SelectTool();
     selectHouse(0);
 }
 
@@ -1246,6 +1409,8 @@ void Window::tool(bool)
     for (int i=0; i<5; ++i)
         if (groundButton[i] == sender)
             drawGround(i);
+    if (arrowButton == sender)
+        select();
 }
 
 void Window::uncheckTools()
@@ -1260,6 +1425,16 @@ void Window::uncheckTools()
     for (int i=0; i<5; ++i)
         if (groundButton[i])
             groundButton[i]->setChecked(false);
+    arrowButton->setChecked(false);
+}
+
+void Window::select()
+{
+    if (currentMouseTool)
+        delete currentMouseTool;
+    currentMouseTool = new SelectTool();
+    uncheckTools();
+    arrowButton->setChecked(true);
 }
 
 void Window::buildStructure(int id)
@@ -1379,6 +1554,9 @@ void Window::keyPressEvent(QKeyEvent *event)
 		case  Qt::Key_U:
 			showunits = !showunits;
 			break;
+        case  Qt::Key_Delete:
+            DeleteSelected();
+            break;
 		default:
 			break;
     }
