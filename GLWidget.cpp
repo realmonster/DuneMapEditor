@@ -10,6 +10,7 @@
 #include "DuneStructures.h"
 #include "DuneGround.h"
 #include "MissionParser.h"
+#include "MissionSettingsWindow.h"
 
 #ifndef _WIN32
 struct POINT
@@ -117,10 +118,11 @@ QGLFormat desiredFormat()
     return fmt;
 }
 
-GLWidget::GLWidget(QWidget *parent)
+GLWidget::GLWidget(Window *parent)
     : QGLWidget(desiredFormat(), parent),
     m_program(0)
 {
+    window = parent;
     connect(&timer, SIGNAL(timeout()), this, SLOT(updateGL()));
     if(format().swapInterval() == -1)
     {
@@ -1092,7 +1094,7 @@ struct BuildUnitTool : MouseTool
 Window::Window()
 {
     DunemaskInit();
-    glWidget = new GLWidget;
+    glWidget = new GLWidget(this);
 
     setCentralWidget(glWidget);
 
@@ -1108,6 +1110,7 @@ Window::Window()
     radarsTimer->start(133);
 
     currentMouseTool = new SelectTool();
+    missionSettingsDialog = 0;
     selectHouse(0);
 }
 
@@ -1133,8 +1136,7 @@ void Window::newMission()
     int ret = msgBox.exec();
     if(ret == QMessageBox::Yes)
     {
-        Mission.Units.clear();
-        Mission.Structures.clear();
+        Mission.Clear();
     }
 }
 
@@ -1170,6 +1172,16 @@ void Window::options()
 {
     OptionsWindow opts;
     opts.exec();
+}
+
+void Window::missionSettings()
+{
+    if (missionSettingsDialog)
+        delete missionSettingsDialog;
+    missionSettingsDialog = new MissionSettingsWindow(this);
+    missionSettingsDialog->show();
+    missionSettingsDialog->raise();
+    missionSettingsDialog->activateWindow();
 }
 
 void Window::help()
@@ -1229,8 +1241,12 @@ void Window::createMenus()
     optionsAct->setStatusTip(tr("Options"));
     connect(optionsAct, SIGNAL(triggered()), this, SLOT(options()));
 
+    missionSettingsAct = new QAction(tr("&Mission Settings"), this);
+    connect(missionSettingsAct, SIGNAL(triggered()), this, SLOT(missionSettings()));
+
     optionsMenu = menuBar()->addMenu(tr("&Options"));
     optionsMenu->addAction(optionsAct);
+    optionsMenu->addAction(missionSettingsAct);
 
     helpAct = new QAction(tr("&Help"), this);
     helpAct->setStatusTip(tr("Help"));

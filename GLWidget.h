@@ -14,12 +14,15 @@
 #include <QToolButton>
 #include <QSlider>
 
+class MissionSettingsWindow;
+class Window;
+
 class GLWidget : public QGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
-    GLWidget(QWidget *parent = 0);
+    GLWidget(Window *parent);
     ~GLWidget();
 
     QSize minimumSizeHint() const;
@@ -31,6 +34,7 @@ protected:
     void resizeGL(int width, int height);
 
 private:
+    Window *window;
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
@@ -67,6 +71,7 @@ private slots:
     void tool(bool checked);
     void house(bool checked);
     void options();
+    void missionSettings();
     void help();
     void about();
 
@@ -98,6 +103,7 @@ private:
     QAction *saveMissionAct;
     QAction *exitAct;
     QAction *optionsAct;
+    QAction *missionSettingsAct;
     QAction *helpAct;
     QAction *aboutAct;
     QTimer *radarsTimer;
@@ -108,6 +114,8 @@ private:
     QToolButton *unitsButton[50];
     QToolButton *groundButton[5];
     QToolButton *houseButton[5];
+
+    MissionSettingsWindow *missionSettingsDialog;
 };
 
 class OptionsWindow : public QDialog
