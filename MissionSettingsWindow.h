@@ -5,6 +5,8 @@
 #include "BasicsPage.h"
 #include "HousesPage.h"
 #include "StarportPage.h"
+#include "TeamsPage.h"
+#include "ReinforcementsPage.h"
 
 class MissionSettingsWindow : public QDialog
 {
@@ -21,6 +23,8 @@ private:
     BasicsPage *basics;
     HousesPage *houses;
     StarportPage *starport;
+    TeamsPage *teams;
+    ReinforcementsPage *reinforcements;
 };
 
 #endif // MISSIONSETTINGSWINDOW_H

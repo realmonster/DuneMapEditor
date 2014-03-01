@@ -34,6 +34,31 @@ struct DuneGround
         (*this) = g;
     }
 
+    void resize(int _width, int _height)
+    {
+        DuneGround n(_width, _height);
+
+        for (int x=0; x<n.width; ++x)
+            for (int y=0; y<n.height; ++y)
+            {
+                unsigned char v = 0xB0;
+                if (in(x,y))
+                     v = (*this)[x][y];
+                n[x][y] = v;
+            }
+
+        free(data);
+        data = n.data;
+        free(types);
+        types = n.types;
+
+        width = _width;
+        height = _height;
+
+        n.data = 0;
+        n.types = 0;
+    }
+
     const DuneGround & operator = (const DuneGround &g)
     {
         if (width != g.width

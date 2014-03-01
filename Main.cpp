@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 
+#include "Electropage.h"
 #include "GLWidget.h"
 
 int main(int argc, char *argv[])

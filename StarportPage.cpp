@@ -1,29 +1,8 @@
 #include "StarportPage.h"
 #include "MissionParser.h"
+#include "IconsOrder.h"
 #include <QScrollArea>
 #include <QVBoxLayout>
-
-static int units_order[] = {
- 4, // Solder
- 2, // Infantry
- 5, // Trooper
- 3, // Troopers
-13, // Trike
-14, // Raider Trike
-15, // Quad
-16, // Harvester
-17, // MCV
- 9, // Tank
-10, // Siege Tank
- 7, // Launcher
- 8, // Deviator
-12, // Sonic
-11, // Devastator
- 6, // ?
- 0, // Carryall
- 1, // Thopter
-25, // Sandworm
-};
 
 StarportPage::StarportPage(QWidget *parent) :
     QWidget(parent)
@@ -57,13 +36,13 @@ StarportPage::StarportPage(QWidget *parent) :
 
     connect(button,SIGNAL(clicked()),this,SLOT(add()));
 
-    for (int i=0; i<Mission.Starport.size(); ++i)
+    for (size_t i=0; i<Mission.Starport.size(); ++i)
     {
         DuneMission::StarportEntry &se = Mission.Starport[i];
         add();
 
-        for (int j=0; j<sizeof(units_order)/sizeof(units_order[0]); ++j)
-            if (units_order[j] == se.unit)
+        for (int j=0; UnitsOrder[j] != -1; ++j)
+            if (UnitsOrder[j] == se.unit)
                 units[i]->setCurrentIndex(j);
         counts[i]->setValue(se.count);
     }
@@ -71,7 +50,7 @@ StarportPage::StarportPage(QWidget *parent) :
 
 void StarportPage::add()
 {
-    QLabel *label = new QLabel(QString().sprintf("%d:",units.size()));
+    QLabel *label = new QLabel(QString().sprintf("%d:",labels.size()));
     QComboBox *unit = new QComboBox;
     QSpinBox *count = new QSpinBox;
     QPushButton *del = new QPushButton("x");
@@ -80,9 +59,9 @@ void StarportPage::add()
     connect(del, SIGNAL(clicked()), this, SLOT(remove()));
     count->setMaximum(0xFFFF);
 
-    for (int z=0; z<sizeof(units_order)/sizeof(units_order[0]); ++z)
+    for (int z=0; UnitsOrder[z] != -1; ++z)
     {
-        int i = units_order[z];
+        int i = UnitsOrder[z];
         unit->addItem(QIcon(QString().sprintf(":/units/unit%02d.png",i)),"");
     }
     unit->setIconSize(QSize(32,24));
@@ -92,21 +71,22 @@ void StarportPage::add()
     counts.push_back(count);
     removeButtons.push_back(del);
 
-    gridLayout->addWidget(label, units.size(), 0);
-    gridLayout->addWidget( unit, units.size(), 1);
-    gridLayout->addWidget(count, units.size(), 2);
-    gridLayout->addWidget(  del, units.size(), 3);
+    int row = labels.size();
+    gridLayout->addWidget(label, row, 0);
+    gridLayout->addWidget( unit, row, 1);
+    gridLayout->addWidget(count, row, 2);
+    gridLayout->addWidget(  del, row, 3);
 
-    gridLayout->setRowStretch(units.size(),0);
-    gridLayout->setRowStretch(units.size()+1,1000);
+    gridLayout->setRowStretch(row,0);
+    gridLayout->setRowStretch(row+1,1000);
 }
 
 void StarportPage::remove()
 {
-    for (int i=0; i<units.size(); ++i)
+    for (size_t i=0; i<labels.size(); ++i)
         if (QObject::sender() == removeButtons[i])
         {
-            for (int j=i; j<units.size(); ++j)
+            for (size_t j=i; j<labels.size(); ++j)
             {
                 gridLayout->removeWidget(labels[j]);
                 gridLayout->removeWidget(units[j]);
@@ -123,7 +103,7 @@ void StarportPage::remove()
             counts.erase(counts.begin()+i);
             removeButtons.erase(removeButtons.begin()+i);
 
-            for (int j=i; j<units.size(); ++j)
+            for (size_t j=i; j<labels.size(); ++j)
             {
                 labels[j]->setText(QString().sprintf("%d:",j));
                 gridLayout->addWidget(labels[j], j+1, 0);
@@ -132,7 +112,7 @@ void StarportPage::remove()
                 gridLayout->addWidget(removeButtons[j], j+1, 3);
             }
 
-            gridLayout->setRowStretch(units.size()+1, 1000);
+            gridLayout->setRowStretch(labels.size()+1, 1000);
         }
 }
 
@@ -140,10 +120,10 @@ void StarportPage::remove()
 void StarportPage::Apply()
 {
     Mission.Starport.clear();
-    for (int i=0; i<units.size(); ++i)
+    for (size_t i=0; i<labels.size(); ++i)
     {
         DuneMission::StarportEntry se;
-        se.unit = units_order[units[i]->currentIndex()];
+        se.unit = UnitsOrder[units[i]->currentIndex()];
         se.count = counts[i]->value();
         Mission.Starport.push_back(se);
     }

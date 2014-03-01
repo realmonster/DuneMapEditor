@@ -4,17 +4,24 @@ HEADERS       = Dunes.h \
     DuneGround.h \
     MissionParser.h \
     HousesPage.h \
-    BasicsPage.h \
     MissionSettingsWindow.h \
-    StarportPage.h
+    StarportPage.h \
+    TeamsPage.h \
+    IconsOrder.h \
+    BasicsPage.h \
+    ReinforcementsPage.h \
+    Electropage.h
 
 SOURCES       = GLWidget.cpp \
                 Main.cpp \
     HousesPage.cpp \
-    BasicsPage.cpp \
     MissionParser.cpp \
     MissionSettingsWindow.cpp \
-    StarportPage.cpp
+    StarportPage.cpp \
+    TeamsPage.cpp \
+    IconsOrder.cpp \
+    BasicsPage.cpp \
+    ReinforcementsPage.cpp
 
 MOC_DIR       =	.moc
 OBJECTS_DIR   = .obj

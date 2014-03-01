@@ -13,6 +13,7 @@
 #include <QSignalMapper>
 #include <QToolButton>
 #include <QSlider>
+#include <QSpinBox>
 
 class MissionSettingsWindow;
 class Window;
@@ -51,6 +52,7 @@ public:
     Window();
     int getDrawSize();
     int getHouseSelected();
+    int getHitPoints();
     GLWidget *glWidget;
 
 protected:
@@ -72,8 +74,11 @@ private slots:
     void house(bool checked);
     void options();
     void missionSettings();
+    void setMapSize();
     void help();
     void about();
+    void accept();
+    void reject();
 
 private:
     void createMenus();
@@ -90,11 +95,7 @@ private:
     QMenu *fileMenu;
     QMenu *optionsMenu;
     QMenu *helpMenu;
-    QToolBar *mainTools;
-    QToolBar *structuresMenu;
-    QToolBar *unitsMenu;
-    QToolBar *groundMenu;
-    QToolBar *houseMenu;
+
     QAction *newMapAct;
     QAction *newMissionAct;
     QAction *openMapAct;
@@ -104,10 +105,20 @@ private:
     QAction *exitAct;
     QAction *optionsAct;
     QAction *missionSettingsAct;
+    QAction *setMapSizeAct;
     QAction *helpAct;
     QAction *aboutAct;
+
     QTimer *radarsTimer;
+
+    QToolBar *mainTools;
+    QToolBar *structuresMenu;
+    QToolBar *unitsMenu;
+    QToolBar *groundMenu;
+    QToolBar *houseMenu;
+
     QSlider *drawSizeSlider;
+    QSpinBox *hitPoints;
 
     QToolButton *arrowButton;
     QToolButton *structuresButton[50];
@@ -116,6 +127,7 @@ private:
     QToolButton *houseButton[5];
 
     MissionSettingsWindow *missionSettingsDialog;
+    QDialog *dialog;
 };
 
 class OptionsWindow : public QDialog

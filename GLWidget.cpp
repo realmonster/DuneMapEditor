@@ -11,6 +11,7 @@
 #include "DuneGround.h"
 #include "MissionParser.h"
 #include "MissionSettingsWindow.h"
+#include "IconsOrder.h"
 
 #ifndef _WIN32
 struct POINT
@@ -68,7 +69,7 @@ struct Ground
 
 struct MouseTool
 {
-    virtual void mouseMove(Window *sender, QMouseEvent *event) {}
+    virtual void mouseMove(Window *sender, QMouseEvent *event) {Q_UNUSED(sender,event);}
     virtual void mousePress(Window *sender, QMouseEvent *event) {}
     virtual void mouseRelease(Window *sender, QMouseEvent *event) {}
     virtual ~MouseTool() {}
@@ -679,21 +680,21 @@ void GLWidget::paintGL()
 	double tw = 1.0/16;
 	//else
 	{
-		for (int i=0; i<duneGround.width; ++i)
+        for (int y=0; y<duneGround.height; ++y)
 		{
-			for (int j=0; j<duneGround.height; ++j)
+            for (int x=0; x<duneGround.width; ++x)
 			{
 				int id;
 				if (state == 2)
-					id = duneGroundNew[j][i];
+                    id = duneGroundNew[x][y];
 				else
-					id = duneGround[j][i];
+                    id = duneGround[x][y];
 				int idx = id&15;
 				int idy = (id>>4);
-                glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(j,-i);
-                glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(j+1,-i);
-                glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(j+1,-(i+1));
-                glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(j,-(i+1));
+                glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x,-y);
+                glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+1,-y);
+                glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+1,-(y+1));
+                glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x,-(y+1));
 			}
 		}
 	}
@@ -705,9 +706,9 @@ void GLWidget::paintGL()
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 		glColor4f(1.f,1.f,1.f,0.5f);
 		glBegin( GL_QUADS );
-		for (int y=0; y<duneGround.theight(); ++y)
+        for (int y=0; y<duneGround.theight(); ++y)
 		{
-			for (int x=0; x<duneGround.twidth(); ++x)
+            for (int x=0; x<duneGround.twidth(); ++x)
 			{
 				static int tid[]={0xB0,0x8F,0xC0,0xCF,0x9F};
 				int id = duneGround.t(x,y);
@@ -822,7 +823,31 @@ void GLWidget::paintGL()
                 glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x+0.5-0.5,-(y+0.5+0.5));
             }
         }
-		glEnd();
+        double x = (Mission.CursorPos&0x3F)-0.5;
+        double y = (Mission.CursorPos/0x40)-0.5;
+        int idx = 3;
+        int idy = 5;
+        glTexCoord2d(tw*(idx+0),tw*(idy+0)); glVertex2d(x+0.5-0.5,-(y+0.5-0.5));
+        glTexCoord2d(tw*(idx+1),tw*(idy+0)); glVertex2d(x+0.5+0.5,-(y+0.5-0.5));
+        glTexCoord2d(tw*(idx+1),tw*(idy+1)); glVertex2d(x+0.5+0.5,-(y+0.5+0.5));
+        glTexCoord2d(tw*(idx+0),tw*(idy+1)); glVertex2d(x+0.5-0.5,-(y+0.5+0.5));
+        glEnd();
+
+        // 121 89
+        x = (Mission.TacticalPos&0x3F)-121/32.0;
+        y = (Mission.TacticalPos/0x40)-89/32.0;
+        glDisable( GL_TEXTURE_2D );
+
+        glBegin( GL_LINE_STRIP );
+        glVertex2d(x   ,-(y         ));
+        glVertex2d(x+10,-(y         ));
+        glVertex2d(x+10,-(y+224/32.0));
+        glVertex2d(x   ,-(y+224/32.0));
+        glVertex2d(x   ,-(y         ));
+        glEnd();
+
+        glEnable( GL_TEXTURE_2D );
+
         glDisable( GL_BLEND );
 	}
 
@@ -862,8 +887,14 @@ void LoadMap( QString filename )
     QFile f(filename);
     if (!f.open(QIODevice::ReadOnly))
         return;
+    int size = 1;
+    for (; size<256; ++size)
+        if (f.size()<= size*size)
+            break;
     unsigned char tmp;
     duneGround.Clear();
+    if (duneGround.width != size)
+        duneGround.resize(size,size);
     for (int y=0; y<duneGround.height; ++y)
         for (int x=0; x<duneGround.width; ++x)
         {
@@ -988,7 +1019,7 @@ struct DrawGround : MouseTool
             int drawsize = sender->getDrawSize();
             for (int x=0; x<drawsize; ++x)
             for (int y=0; y<drawsize; ++y)
-                if (duneGround.tin(cx+x,cx+y))
+                if (duneGround.tin(cx+x,cy+y))
                     duneGround.Draw(cx+x,cy+y,id);
         }
     }
@@ -1023,7 +1054,7 @@ struct BuildStructureTool : MouseTool
                 s.id = id;
                 s.house = sender->getHouseSelected();
                 s.flag = 0;
-                s.life = 0x100;
+                s.life = sender->getHitPoints();
                 s.pos = pos;
                 Mission.Structures.push_back(s);
             }
@@ -1070,7 +1101,7 @@ struct BuildUnitTool : MouseTool
                 s.house = sender->getHouseSelected();
                 s.angle = 0;
                 s.ai = 0;
-                s.life = 0x100;
+                s.life = sender->getHitPoints();
                 s.pos = pos;
                 Mission.Units.push_back(s);
             }
@@ -1144,7 +1175,7 @@ void Window::openMap()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Choose Map"));
     if (!fileName.isEmpty())
-        LoadMap(fileName.toLocal8Bit().data());
+        LoadMap(fileName);
 }
 
 void Window::openMission()
@@ -1158,7 +1189,7 @@ void Window::saveMap()
 {
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Map"));
     if (!fileName.isEmpty())
-        SaveMap(fileName.toLocal8Bit().data());
+        SaveMap(fileName);
 }
 
 void Window::saveMission()
@@ -1184,13 +1215,67 @@ void Window::missionSettings()
     missionSettingsDialog->activateWindow();
 }
 
+void Window::setMapSize()
+{
+    QDialog dlg;
+    dialog = &dlg;
+    QVBoxLayout *layout = new QVBoxLayout();
+    dlg.setLayout(layout);
+    QGridLayout *grid = new QGridLayout();
+
+    grid->addWidget(new QLabel(tr("Width")), 0, 0);
+    grid->addWidget(new QLabel(tr("Height")), 0, 1);
+
+    QSpinBox *width = new QSpinBox();
+    QSpinBox *height = new QSpinBox();
+    width->setMaximum(256);
+    height->setMaximum(256);
+    width->setValue(duneGround.width);
+    height->setValue(duneGround.height);
+
+    grid->addWidget(width, 1, 0);
+    grid->addWidget(height, 1, 1);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    connect(buttons,SIGNAL(accepted()),this,SLOT(accept()));
+    connect(buttons,SIGNAL(rejected()),this,SLOT(reject()));
+
+    layout->addLayout(grid);
+    layout->addWidget(buttons);
+
+    int r = dlg.exec();
+    if (r)
+    {
+        duneGround.resize(width->value(), height->value());
+        for (int y=0; y<duneGround.height; ++y)
+            for (int x=0; x<duneGround.width; ++x)
+                duneGround.SetTileMask(x,y);
+    }
+}
+
+void Window::accept()
+{
+    dialog->done(1);
+}
+
+void Window::reject()
+{
+    dialog->done(0);
+}
+
 void Window::help()
 {
+    QMessageBox::about(this, tr("Help"),tr(
+"Don't ask stupid questions!!!\nRead FAQ first!"));
 }
 
 void Window::about()
 {
-    QMessageBox::about(this, tr("About"), tr("Здесь должен быть пафосный текст"));
+    QMessageBox::about(this, tr("About"),tr(
+"Dune Map Editor by r57shell\n"
+"Last Update: 01.03.2014\n"
+"For additional info visit: http://elektropage.ru\n"
+"Or mail to: r57shell@uralweb.ru\n"));
 }
 
 void Window::createMenus()
@@ -1244,9 +1329,14 @@ void Window::createMenus()
     missionSettingsAct = new QAction(tr("&Mission Settings"), this);
     connect(missionSettingsAct, SIGNAL(triggered()), this, SLOT(missionSettings()));
 
+    setMapSizeAct = new QAction(tr("&Set Map Size"), this);
+    connect(setMapSizeAct, SIGNAL(triggered()), this, SLOT(setMapSize()));
+
+
     optionsMenu = menuBar()->addMenu(tr("&Options"));
     optionsMenu->addAction(optionsAct);
     optionsMenu->addAction(missionSettingsAct);
+    optionsMenu->addAction(setMapSizeAct);
 
     helpAct = new QAction(tr("&Help"), this);
     helpAct->setStatusTip(tr("Help"));
@@ -1271,14 +1361,6 @@ void Window::createToolbars()
         DuneGround::Dune,
     };
 
-    char* gname[] = {
-        "dust",
-        "ground",
-        "spicelow",
-        "spicehigh",
-        "dune",
-    };
-
     mainTools = this->addToolBar(tr("Main"));
 
     arrowButton = new QToolButton();
@@ -1292,8 +1374,9 @@ void Window::createToolbars()
     for (int z=0; z<sizeof(gorder)/sizeof(gorder[0]); ++z)
     {
         int i = gorder[z];
+        QString gname = QString(GroundName[z]).toLower();
         groundButton[i] = new QToolButton();
-        groundButton[i]->setIcon(QIcon(QString().sprintf(":/ground/%s.png",gname[z])));
+        groundButton[i]->setIcon(QIcon(QString().sprintf(":/ground/%s.png",gname.toLocal8Bit().data())));
         groundButton[i]->setCheckable(true);
         groundMenu->addWidget(groundButton[i]);
         connect(groundButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
@@ -1316,27 +1399,10 @@ void Window::createToolbars()
         houseMenu->addWidget(houseButton[i]);
         connect(houseButton[i], SIGNAL(clicked(bool)), this, SLOT(house(bool)));
     }
-
-    int order[] = {
-         0, // platform x1
-         1, // platform x4
-         8, // CY
-         9, // Windtrap
-        12, // Refinery
-        7,  // Barracks
-        10, // Barracks
-        18, // Radar
-        17, // Spice Silo
-         3, // Venchile
-         4, // Venchile
-        14, // Wall
-        15, // Turret
-        16, // R-Turret
-        13, // Repair
-         5, // Hi-Tech
-        11, // Starport
-         2, // Palace
-        };
+    hitPoints = new QSpinBox();
+    hitPoints->setMaximum(256);
+    hitPoints->setValue(256);
+    houseMenu->addWidget(hitPoints);
 
     structuresMenu = this->addToolBar(tr("Structures"));
 
@@ -1345,9 +1411,9 @@ void Window::createToolbars()
         structuresButton[z] = NULL;
         unitsButton[z] = NULL;
     }
-    for (int z=0; z<sizeof(order)/sizeof(order[0]); ++z)
+    for (int z=0; StructuresOrder[z] != -1; ++z)
     {
-        int i = order[z];
+        int i = StructuresOrder[z];
         structuresButton[i] = new QToolButton();
         structuresButton[i]->setIcon(QIcon(QString().sprintf(":/structures/structure%02d.png",i)));
         structuresButton[i]->setCheckable(true);
@@ -1355,33 +1421,11 @@ void Window::createToolbars()
         connect(structuresButton[i], SIGNAL(clicked(bool)), this, SLOT(tool(bool)));
     }
 
-    int uorder[] = {
-         4, // Solder
-         2, // Infantry
-         5, // Trooper
-         3, // Troopers
-        13, // Trike
-        14, // Raider Trike
-        15, // Quad
-        16, // Harvester
-        17, // MCV
-         9, // Tank
-        10, // Siege Tank
-         7, // Launcher
-         8, // Deviator
-        12, // Sonic
-        11, // Devastator
-         6, // ?
-         0, // Carryall
-         1, // Thopter
-        25, // Sandworm
-        };
-
     unitsMenu = this->addToolBar(tr("Units"));
 
-    for (int z=0; z<sizeof(uorder)/sizeof(uorder[0]); ++z)
+    for (int z=0; UnitsOrder[z] != -1; ++z)
     {
-        int i = uorder[z];
+        int i = UnitsOrder[z];
         unitsButton[i] = new QToolButton();
         unitsButton[i]->setIcon(QIcon(QString().sprintf(":/units/unit%02d.png",i)));
         unitsButton[i]->setCheckable(true);
@@ -1451,6 +1495,11 @@ void Window::select()
     currentMouseTool = new SelectTool();
     uncheckTools();
     arrowButton->setChecked(true);
+}
+
+int Window::getHitPoints()
+{
+    return hitPoints->value();
 }
 
 void Window::buildStructure(int id)

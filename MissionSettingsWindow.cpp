@@ -9,11 +9,15 @@ MissionSettingsWindow::MissionSettingsWindow(QWidget *parent) :
     basics = new BasicsPage;
     houses = new HousesPage;
     starport = new StarportPage;
+    teams = new TeamsPage;
+    reinforcements = new ReinforcementsPage;
 
     QTabWidget *tabWidget = new QTabWidget;
     tabWidget->addTab(basics, tr("Basics"));
     tabWidget->addTab(houses, tr("Houses"));
     tabWidget->addTab(starport, tr("Starport"));
+    tabWidget->addTab(teams, tr("Teams"));
+    tabWidget->addTab(reinforcements, tr("Reinforcements"));
 
     QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
@@ -33,6 +37,8 @@ void MissionSettingsWindow::apply()
     basics->Apply();
     houses->Apply();
     starport->Apply();
+    teams->Apply();
+    reinforcements->Apply();
     hide();
 }
 
