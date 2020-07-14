@@ -1307,7 +1307,7 @@ void Window::about()
 {
     QMessageBox::about(this, tr("About"),tr(
 "Dune Map Editor by r57shell\n"
-"Last Update: 01.03.2014\n"
+"Last Update: 15.07.2020\n"
 "For additional info visit: http://elektropage.ru\n"
 "Or mail to: r57shell@uralweb.ru\n"));
 }

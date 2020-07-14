@@ -177,6 +177,86 @@ struct DuneGround
         return false;
     }
 
+    // tile is Dune or outside map
+    // shortcut method, use with care
+    bool isDuneTile(int x, int y)
+    {
+        return (!in(x, y) || getTileType(x, y) == Dune);
+    }
+
+    // check is mask position is valid dune corner.
+    // it return false if you need to remove corner to resolve conflict.
+    // it assume that t(x, y) == Dune, and all four tiles around has type Dune.
+    bool isDuneCorner(int x, int y)
+    {
+        if (y < 2)
+            return true;
+
+        int a1 = -1, a2 = -1;
+        if (t(x, y - 2) == Dune)
+        {
+            if (in(x/2, y/2 - 2))
+                a2 = getTileType(x/2, y/2 - 2);
+            else
+                a2 = Dune;
+            if (in(x/2 - 1, y/2 - 2))
+                a1 = getTileType(x/2 - 1, y/2 - 2);
+            else
+                a1 = Dune;
+            if (a1 == Dune && a2 == Dune && isDuneCorner(x, y - 2))
+                return true;
+        }
+
+        if (x >= 2 && t(x - 2, y - 2) == Dune)
+        {
+            if (a1 < 0)
+            {
+                if (in(x/2 - 1, y/2 - 2))
+                    a1 = getTileType(x/2 - 1, y/2 - 2);
+                else
+                    a1 = Dune;
+            }
+            if (a1 == Dune
+             && isDuneTile(x/2 - 2, y/2 - 2)
+             && isDuneTile(x/2 - 2, y/2 - 1)
+             && isDuneCorner(x - 2, y - 2))
+            {
+                if (!in(x/2 - 2, y/2) || getTileType(x/2 - 2, y/2) == Dune)
+                {
+                    if (t(x - 2, y) != Dune || !isDuneCorner(x - 2, y))
+                        return false;
+                }
+                else
+                    return false;
+            }
+        }
+
+        if (tin(x + 2, y - 2) && t(x + 2, y - 2) == Dune)
+        {
+            if (a2 < 0)
+            {
+                if (in(x/2 , y/2 - 2))
+                    a2 = getTileType(x/2, y/2 - 2);
+                else
+                    a2 = Dune;
+            }
+            if (a2 == Dune
+             && isDuneTile(x/2 + 1, y/2 - 2)
+             && isDuneTile(x/2 + 1, y/2 - 1)
+             && isDuneCorner(x + 2, y - 2))
+            {
+                if (!in(x/2 + 1, y/2) || getTileType(x/2 + 1, y/2) == Dune)
+                {
+                    if (t(x + 2, y) != Dune || !isDuneCorner(x + 2, y))
+                        return false;
+                }
+                else
+                    return false;
+            }
+        }
+        return true;
+    }
+
     void Draw(int x, int y, unsigned char type)
     {
         //   0   1   2
@@ -325,25 +405,164 @@ struct DuneGround
                     if (t(i + x*2, j + y*2) == Dune)
                         mask |= 1 << (i + j*3);
 
-            int k = 0;
-            int min = 10;
-            for (int i = 0; i < 256; ++i)
-                if (dunemask[i] != -1)
+            // remove side if neighbor not dune
+            if ((mask & (1+2+4)) && !isDuneTile(x, y - 1))
+                mask &= ~(1+2+4);
+            if ((mask & (4+32+256)) && !isDuneTile(x + 1, y))
+                mask &= ~(4+32+256);
+            if ((mask & (64+128+256)) && !isDuneTile(x, y + 1))
+                mask &= ~(64+128+256);
+            if ((mask & (1+8+64)) && !isDuneTile(x - 1, y))
+                mask &= ~(1+8+64);
+
+            // remove corner if neighbor by corner is not dune or bad corner
+            if ((mask & 1) && (!isDuneTile(x - 1, y - 1) || !isDuneCorner(x*2, y*2)))
+                mask ^= 1;
+            if ((mask & 4) && (!isDuneTile(x + 1, y - 1) || !isDuneCorner(x*2 + 2, y*2)))
+                mask ^= 4;
+            if ((mask & 256) && (!isDuneTile(x + 1, y + 1) || !isDuneCorner(x*2 + 2, y*2 + 2)))
+                mask ^= 256;
+            if ((mask & 64) && (!isDuneTile(x - 1, y + 1) || !isDuneCorner(x*2, y*2 + 2)))
+                mask ^= 64;
+
+            if (!(mask & (1+64)))
+                mask &= ~8;
+            if (!(mask & (4+256)))
+                mask &= ~32;
+
+            switch(mask & make_dunemask(1,0,1,0,0,0,1,0,1))
+            {
+            case make_dunemask(0,0,0,0,0,0,0,0,0):
+            case make_dunemask(0,0,0,0,0,0,1,0,0):
+                break;
+
+            case make_dunemask(1,0,1,0,0,0,0,0,0):
+                mask &= ~32;
+                // fall down !
+            case make_dunemask(1,0,0,0,0,0,0,0,0):
+                if (!(mask & 8) || x == 0)
+                    break;
+                if (t(x*2 - 2, y*2) == Dune
+                 && isDuneTile(x - 2, y)
+                 && isDuneTile(x - 2, y - 1)
+                 && isDuneCorner(x*2 - 2, y*2))
                 {
-                    int d = DunemaskDist((dunemask[i] & DUNE_MASK), (mask & DUNE_MASK));
-                    if (((dunemask[i] & DUNE_MASK) & (mask & DUNE_MASK)) == (mask & DUNE_MASK)
-                     && d < min)
+                    if (t(x*2 - 2, y*2 + 2) == Dune
+                     && isDuneTile(x - 2, y)
+                     && isDuneTile(x - 1, y + 1)
+                     && isDuneTile(x - 2, y + 1)
+                     && isDuneCorner(x*2 - 2, y*2 + 2))
                     {
-                        k = i;
-                        min = d;
                     }
+                    else
+                        mask &= ~8;
                 }
-            for (int i = 0; i < 256; ++i)
-                if (dunemask[i] != -1)
+                break;
+
+            case make_dunemask(1,0,1,0,0,0,1,0,0):
+                mask |= 8;
+                // fall down !
+            case make_dunemask(0,0,1,0,0,0,0,0,0):
+                if (!(mask & 32) || !in(x + 1, y))
+                    break;
+                if (t(x*2 + 4, y*2) == Dune
+                 && isDuneTile(x + 2, y)
+                 && isDuneTile(x + 2, y - 1)
+                 && isDuneCorner(x*2 + 4, y*2))
                 {
-                    if (((dunemask[k] & DUNE_MASK)|(mask&16)) == (dunemask[i] & DUNE_MASKMID))
-                        k = i;
+                    if (t(x*2 + 4, y*2 + 2) == Dune
+                     && isDuneTile(x + 2, y)
+                     && isDuneTile(x + 1, y + 1)
+                     && isDuneTile(x + 2, y + 1)
+                     && isDuneCorner(x*2 + 4, y*2 + 2))
+                        mask &= ~32;
                 }
+                break;
+
+            case make_dunemask(1,0,0,0,0,0,1,0,1):
+            case make_dunemask(0,0,0,0,0,0,1,0,1):
+                if (mask & 1)
+                    mask |= 8;
+                else
+                    mask &= ~8;
+                // fall down !
+            case make_dunemask(0,0,0,0,0,0,0,0,1):
+                if (!(mask & 32) || !in(x + 1, y))
+                    break;
+                if (t(x*2 + 4, y*2 + 2) == Dune
+                 && isDuneTile(x + 2, y)
+                 && isDuneTile(x + 2, y + 1)
+                 && isDuneCorner(x*2 + 4, y*2 + 2))
+                {
+                    if (t(x*2 + 4, y*2) == Dune
+                     && isDuneTile(x + 2, y)
+                     && isDuneTile(x + 1, y - 1)
+                     && isDuneTile(x + 2, y - 1)
+                     && isDuneCorner(x*2 + 4, y*2))
+                    {
+                    }
+                    else
+                        mask &= ~32;
+                }
+                break;
+
+            case make_dunemask(1,0,0,0,0,0,1,0,0):
+                if ((mask & 8) || x == 0)
+                    break;
+                if (t(x*2 - 2, y*2) == Dune
+                 && isDuneTile(x - 2, y)
+                 && isDuneTile(x - 2, y - 1)
+                 && isDuneCorner(x*2 - 2, y*2))
+                {
+                    if (t(x*2 - 2, y*2 + 2) == Dune
+                     && isDuneTile(x - 2, y)
+                     && isDuneTile(x - 2, y + 1)
+                     && isDuneCorner(x*2 + 2, y*2 + 2))
+                    {
+                    }
+                    else
+                        mask |= 8;
+                }
+                else
+                    mask |= 8;
+                break;
+
+            case make_dunemask(0,0,1,0,0,0,0,0,1):
+            case make_dunemask(0,0,1,0,0,0,1,0,1):
+                mask |= 32;
+                break;
+
+            case make_dunemask(1,0,1,0,0,0,0,0,1):
+                mask = make_dunemask(1,0,1,0,0,1,0,0,1);
+                break;
+
+            case make_dunemask(1,0,1,0,0,0,1,0,1):
+                mask |= 8;
+                if ((mask & 32) || !in(x + 1, y))
+                    break;
+                if (t(x*2 + 4, y*2 + 2) == Dune
+                 && isDuneTile(x + 2, y)
+                 && isDuneTile(x + 2, y + 1)
+                 && isDuneCorner(x*2 + 4, y*2 + 2))
+                {
+                    mask |= 32;
+                    break;
+                }
+                if (t(x*2 + 4, y*2) == Dune
+                 && isDuneTile(x + 2, y)
+                 && isDuneTile(x + 2, y - 1)
+                 && isDuneCorner(x*2 + 4, y*2))
+                    mask |= 32;
+                break;
+            }
+
+            int k = 0;
+            for (int i = 0; i < 256; ++i)
+                if (dunemask[i] != -1 && (dunemask[i] & DUNE_MASK) == (mask & DUNE_MASK))
+                    k = i;
+            for (int i = 0; i < 256; ++i)
+                if (dunemask[i] != -1 && (dunemask[i] & DUNE_MASKMID) == (mask & DUNE_MASKMID))
+                    k = i;
             if (k == 0x9C && (mask & 2))
                 k = 0x60;
             (*this)[x][y] = k;
