@@ -45,6 +45,7 @@ double zoom = 1;
 bool showgrey = false;
 bool showunits = true;
 int state = 0;
+bool showmask = true;
 bool drawinverse = false;
 
 struct Ground
@@ -717,7 +718,7 @@ void GLWidget::paintGL()
 	}
 	glEnd();
 
-	if (state == 1)
+    if (state == 1 && showmask)
 	{
 		glEnable( GL_BLEND );
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -1295,6 +1296,11 @@ void Window::about()
 "Or mail to: r57shell@uralweb.ru\n"));
 }
 
+void Window::togglemask()
+{
+    showmask = showMaskCheckBox->isChecked();
+}
+
 void Window::createMenus()
 {
     newMapAct = new QAction(tr("&New Map"), this);
@@ -1406,6 +1412,11 @@ void Window::createToolbars()
     drawSizeSlider->setMinimumWidth(70);
     drawSizeSlider->setMaximumWidth(100);
     groundMenu->addWidget(drawSizeSlider);
+
+    showMaskCheckBox = new QCheckBox();
+    showMaskCheckBox->setChecked(true);
+    connect(showMaskCheckBox, SIGNAL(clicked()), this, SLOT(togglemask()));
+    groundMenu->addWidget(showMaskCheckBox);
 
     houseMenu = this->addToolBar(tr("Houses"));
     for (int i=0; i<5; ++i)

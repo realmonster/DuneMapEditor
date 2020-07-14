@@ -96,6 +96,7 @@ private slots:
     void about();
     void accept();
     void reject();
+    void togglemask();
 
 private:
     void createMenus();
@@ -142,6 +143,8 @@ private:
     QToolButton *unitsButton[50];
     QToolButton *groundButton[5];
     QToolButton *houseButton[5];
+
+    QCheckBox *showMaskCheckBox;
 
     MissionSettingsWindow *missionSettingsDialog;
     QDialog *dialog;
