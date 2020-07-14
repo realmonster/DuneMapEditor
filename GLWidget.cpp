@@ -145,7 +145,7 @@ GLWidget::GLWidget(Window *parent)
     if(format().swapInterval() == -1)
     {
         // V_blank synchronization unavailable
-        timer.setInterval(1);
+        timer.setInterval(15);
     }
     else
     {
