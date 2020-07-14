@@ -1038,7 +1038,23 @@ struct DrawGround : MouseTool
             for (int x=0; x<drawsize; ++x)
             for (int y=0; y<drawsize; ++y)
                 if (duneGround.tin(cx+x,cy+y))
-                    duneGround.Draw(cx+x,cy+y,id);
+                {
+                    const int xx = cx + x;
+                    const int yy = cy + y;
+                    duneGround.t(xx, yy) = id;
+
+                    // walk across rhomb
+                    const int x1 =  xx / 2;
+                    const int y1 =  yy / 2;
+                    for (int i1 = -3; i1 <= 3; ++i1)
+                    for (int i2 = -3 + abs(i1); abs(i1) + abs(i2) <= 3; ++i2)
+                    {
+                        const int px = x1 + i2;
+                        const int py = y1 + i1;
+                        if (duneGround.in(px, py))
+                            duneGround.Update(px, py);
+                    }
+                }
         }
     }
 };
