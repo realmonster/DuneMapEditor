@@ -58,7 +58,7 @@ struct DuneGround
         for (int x=0; x<n.width; ++x)
             for (int y=0; y<n.height; ++y)
             {
-                unsigned char v = 0xB0;
+                unsigned char v = 0x7F;
                 if (in(x,y))
                      v = (*this)[x][y];
                 n[x][y] = v;
@@ -99,7 +99,7 @@ struct DuneGround
     {
         for (int x=0; x<width; ++x)
             for (int y=0; y<height; ++y)
-                (*this)[x][y] = 0xB0;
+                (*this)[x][y] = 0x7F;
         for (int x=0; x<twidth(); ++x)
             for (int y=0; y<theight(); ++y)
                 this->t(x,y) = Dust;
@@ -277,13 +277,13 @@ struct DuneGround
 
         int k = 0;
         int mask = 0;
-        int id = 0xB0;
+        int id = 0x7F;
         if (types_mask & (1<<Ground))
         {
             k = GetK(x,y,Ground);
             id = 0x80+k;
             if (k == 0)
-                id = 0xB0;
+                id = 0x7F;
             if ( k == 16) // point
                 id = 0x80;
             if ( k == 17)

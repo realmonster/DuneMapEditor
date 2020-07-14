@@ -37,7 +37,7 @@ int DunemaskDist(int a,int b)
 void DunemaskInit()
 {
 	memset(dunemask,-1,sizeof(dunemask));
-	dunemask[0xB0]=make_dunemask(0,0,0,0,0,0,0,0,0);
+	dunemask[0x7F]=make_dunemask(0,0,0,0,0,0,0,0,0);
 	dunemask[0x50]=make_dunemask(1,0,1,1,0,0,0,0,0);
 	dunemask[0x51]=make_dunemask(0,0,1,0,0,1,1,0,1);
 	dunemask[0x52]=make_dunemask(0,0,1,0,1,0,0,0,0);

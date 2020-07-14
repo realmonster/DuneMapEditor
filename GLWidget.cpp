@@ -728,7 +728,7 @@ void GLWidget::paintGL()
 		{
             for (int x=0; x<duneGround.twidth(); ++x)
 			{
-				static int tid[]={0xB0,0x8F,0xC0,0xCF,0x9F};
+                static int tid[]={0x7F,0x8F,0xBF,0xCF,0x9F};
 				int id = duneGround.t(x,y);
 				id = tid[id];
 				int idx = id&15;
